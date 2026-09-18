@@ -164,8 +164,20 @@ test("preserves the fit-width reading anchor when the review panel is hidden and
   await waitForMode(page, "Review");
 
   const selected = page.locator('[data-review-item-id="redline-consultant"]');
+  const viewport = page.locator(".docx-preview-viewport");
+  await viewport.evaluate((element) => {
+    element.dataset.selectionScroll = "pending";
+    element.addEventListener(
+      "scrollend",
+      () => {
+        element.dataset.selectionScroll = "complete";
+      },
+      { once: true },
+    );
+  });
   await selected.click();
   await expect(selected).toHaveAttribute("aria-pressed", "true");
+  await expect(viewport).toHaveAttribute("data-selection-scroll", "complete");
   const preview = page.locator(".docx-preview");
   await preview.evaluate((node) => {
     (window as typeof window & { __reviewPreview?: Element }).__reviewPreview = node;
