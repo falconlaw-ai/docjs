@@ -1,115 +1,180 @@
-[![npm version](https://badge.fury.io/js/docx-preview.svg)](https://www.npmjs.com/package/docx-preview)
-[![Support Ukraine](https://img.shields.io/badge/Support-Ukraine-blue?style=flat&logo=adguard)](https://war.ukraine.ua/)
+# DocJS document preview
 
-# docxjs
-Docx rendering library
+A React viewer for original PDF, DOCX, and Markdown documents, with a working-DOCX
+review view and externally supplied comments and redlines. This repository owns
+the DOCX engine source and retains the `docx-preview` package name. The React
+extraction is not a published npm release.
 
-Demo - https://volodymyrbaydalka.github.io/docxjs/
+The viewer ports Falcon's preview POC, including its styling, typography and
+geometry corrections, measured pagination, and review navigation. See
+[UPSTREAM.md](UPSTREAM.md) for source checkpoints and maintenance boundaries.
 
-Goal
-----
-Goal of this project is to render/convert DOCX document into HTML document with keeping HTML semantic as much as possible. 
-That means library is limited by HTML capabilities (for example Google Docs renders *.docx document on canvas as an image).
+## Run the example
 
-Installation
------
+Use Node 24 and pnpm:
+
+```sh
+pnpm install
+pnpm build-prod
+pnpm example:dev
 ```
-npm install docx-preview
+
+The example uses prepared fixtures and a deterministic fake backend. It shows
+Original, Review, and Final, preparation failure and retry, review item updates,
+and custom cards. It performs no PDF or Markdown conversion. Uploaded documents
+can be previewed locally; a fixture mapping is required for the example's prepared
+review flow.
+
+## React integration
+
+Import the component and its stylesheet from separate entry points:
+
+```tsx
+import { useState } from "react";
+import {
+  DocumentPreview,
+  type PreviewDocument,
+  type PreviewMode,
+  type ReviewItem,
+} from "docx-preview/react";
+import "docx-preview/react/styles.css";
+
+export function ReviewDocument({
+  original,
+  items,
+}: {
+  original: PreviewDocument;
+  items: readonly ReviewItem[];
+}) {
+  const [mode, setMode] = useState<PreviewMode>("original");
+  return (
+    <DocumentPreview
+      original={original}
+      mode={mode}
+      onModeChange={setMode}
+      items={items}
+    />
+  );
+}
 ```
 
-Usage
------
-```html
-<!--lib uses jszip-->
-<script src="https://unpkg.com/jszip/dist/jszip.min.js"></script>
-<script src="docx-preview.min.js"></script>
-<script>
-    var docData = <document Blob>;
+`original` contains a stable `id`, a `revision`, a `format` of `docx`, `pdf`, or
+`md`, and a browser `File`. Change the revision when the document changes. Keep
+file identity stable across review-item updates. The viewer is browser-only and
+uses React 19. Its parent must give it usable width and height.
 
-    docx.renderAsync(docData, document.getElementById("container"))
-        .then(x => console.log("docx: finished"));
-</script>
-<body>
-    ...
-    <div id="container"></div>
-    ...
-</body>
+A source DOCX can serve as its own working document. For PDF and Markdown, supply
+`preparation` and `onRequestPreparation`:
+
+- `unavailable` means a working document has not been supplied.
+- `pending` contains the original's `{ id, revision }` as `identity`.
+- `ready` contains that identity and the prepared DOCX `file`.
+- `error` contains that identity and a displayable `message`.
+
+The callback receives the original document and asks the application to prepare
+or retry it. The application owns the request, cancellation, caching, and state.
+The viewer ignores preparation for another identity. Original stays visible
+while preparation or the first working-document render is pending. Failure leaves
+the original usable. See [the example](example/src/App.tsx) and
+[its fake backend](example/src/fakeBackend.ts) for a complete integration.
+
+## Review items and Final
+
+Supply an immutable item array. Each item has a stable external `id`, a `kind`
+of `comment` or `redline`, and an `anchor` with `quote` plus optional `prefix`,
+`suffix`, and `paragraphId`. Comments use `body`; redlines use `replacement`.
+Optional `metadata` carries application data for custom cards.
+
+Anchors resolve against the working DOCX's original text. Paragraph IDs are
+scoped to that document revision. The resolver understands its ordered `pN`
+identifiers and native Word paragraph IDs where available, and checks the quoted
+text rather than trusting an ID alone. Repeated quotes need enough context to
+resolve uniquely. Unsupported ranges, stale anchors, and overlapping redlines
+produce visible diagnostics. Cross-paragraph ranges and ranges crossing tabs or
+line breaks are not supported in this extraction.
+
+Review displays comments and proposed replacements. **Final hides comments and
+shows every supplied resolvable, nonconflicting redline as replacement text.** It
+does not approve items, change the source bytes, or export a document. Consumers
+that need an approved subset must filter the supplied array. Final also retains
+the POC's accepted-looking projection of native Word tracked changes.
+
+Item updates reuse the document source and patch affected paragraphs, then
+repaginate the affected section tail. They do not rebuild a DOCX ZIP. Switching
+modes may reparse and repaginate the prepared document; it does not reconvert it.
+A failed update preserves the last committed rendering and reports a refresh
+error through `onRefreshError`.
+
+## Custom cards and appearance
+
+`renderReviewItem` receives `{ item, entity, selected, diagnostic }`. Return the
+card body and any application-owned action controls. The viewer retains the outer
+selection and navigation target, including repeated clicks, keyboard activation,
+and document-to-card scrolling. Use application callbacks from custom controls
+for business actions such as approval; the viewer has no approval policy.
+
+The default shell preserves the POC's grey background, white pages, small page
+corners, zoom controls, and review-card borders. Use `className` and `style` to
+adapt the shell. DOCX styles live in Shadow DOM so application CSS does not replace
+source typography. Zoom scales rendered pages rather than changing logical
+pagination.
+
+## PDF resources and document isolation
+
+Pass `pdfAssets` with `workerUrl` and `resourceBaseUrl` pointing to locally hosted
+resources from the same `pdfjs-dist` version used by the package. The resource
+base contains `cmaps/`, `standard_fonts/`, `wasm/`, and `iccs/`. The worker is
+`build/pdf.worker.min.mjs` from that installation. The example's asset-copy script
+demonstrates deployment without a CDN or Vite-specific imports in the library.
+
+The renderers restrict document resources, skip Markdown raw HTML, disable DOCX
+HTML chunks, and isolate DOCX styles. Hosts must also enforce a Content Security
+Policy that limits images, fonts, workers, and other embedded resources to the
+intended local, blob, or data sources. The example includes that policy. Do not
+assume post-render cleanup alone prevents every resource fetch in an arbitrary
+host. External links remain explicit user actions.
+
+The library owns renderer cleanup and superseded rendering work. Applications own
+document retrieval, transport subscriptions, persistence, conversion credentials,
+and export. The package includes no SuperDoc, Yjs, Hocuspocus, or backend worker.
+
+## Rendering limits and verification
+
+The extraction preserves the POC's corrections. It does not claim exact Word
+layout. Font availability affects wrapping, and complex fields, multi-column
+flow, floating objects, widow/orphan rules, and notes still have limitations.
+
+The fresh reference POC rendered the consulting fixture as five Letter pages and
+the complex MSA as 17 pages; its source PDF has 18 pages. Page counts are comparison
+evidence, not a reason to override document fonts, spacing, margins, or authored
+breaks. Fixture provenance is recorded in
+[the fixture notes](tests/preview/fixtures/README.md).
+
+```sh
+pnpm build-prod
+pnpm typecheck
+pnpm test:package
+pnpm test:review
+pnpm exec karma start karma.conf.cjs --single-run --browsers ChromeHeadless
+pnpm example:build
+pnpm test:preview
 ```
-API
----
+
+The inherited Karma/Jasmine suite exercises the engine. Review-model tests cover
+anchor projection and incremental changes. Browser tests mount the built package
+and exercise rendering, preparation, mode changes, and navigation. Browser tests
+require Chrome and use the local example server.
+
+## Engine entry point
+
+The root entry remains available for non-React use:
+
 ```ts
-// renders document into specified element
-renderAsync(
-    document: Blob | ArrayBuffer | Uint8Array, // could be any type that supported by JSZip.loadAsync
-    bodyContainer: HTMLElement, //element to render document content,
-    styleContainer: HTMLElement, //element to render document styles, numbeings, fonts. If null, bodyContainer will be used.
-    options: {
-        className: string = "docx", //class name/prefix for default and document style classes
-        inWrapper: boolean = true, //enables rendering of wrapper around document content
-        hideWrapperOnPrint: boolean = false, //disable wrapper styles on print
-        ignoreWidth: boolean = false, //disables rendering width of page
-        ignoreHeight: boolean = false, //disables rendering height of page
-        ignoreFonts: boolean = false, //disables fonts rendering
-        breakPages: boolean = true, //enables page breaking on page breaks
-        ignoreLastRenderedPageBreak: boolean = true, //disables page breaking on lastRenderedPageBreak elements
-        experimental: boolean = false, //enables experimental features (tab stops calculation)
-        trimXmlDeclaration: boolean = true, //if true, xml declaration will be removed from xml documents before parsing
-        useBase64URL: boolean = false, //if true, images, fonts, etc. will be converted to base 64 URL, otherwise URL.createObjectURL is used
-        renderChanges: false, //enables experimental rendering of document changes (inserions/deletions)
-        renderHeaders: true, //enables headers rendering
-        renderFooters: true, //enables footers rendering
-        renderFootnotes: true, //enables footnotes rendering
-        renderEndnotes: true, //enables endnotes rendering
-        renderComments: false, //enables experimental comments rendering
-        renderAltChunks: true, //enables altChunks (html parts) rendering
-        debug: boolean = false, //enables additional logging
-        h: ({ ns, tagName, className, style, children, ...props } | Node | string): Node, //experimental hook for HTML rendering, default implementation - defaultOptions.h
-    }): Promise<WordDocument>
-
-defaultOptions: Options; // default options
-
-/// ==== experimental / internal API ===
-// this API could be used to modify document before rendering
-// renderAsync = parseAsync + renderDocument
-
-// parse document and return internal document object
-parseAsync(
-    document: Blob | ArrayBuffer | Uint8Array,
-    options: Options
-): Promise<WordDocument>
-
-// render internal document object and return list of nodes
-renderDocument(
-    wordDocument: WordDocument,
-    options: Options
-): Promise<Node[]>
+import { renderAsync } from "docx-preview";
+await renderAsync(file, container, undefined, { renderChanges: true });
 ```
 
-Thumbnails, TOC and etc.
-------
-Thumbnails is added only for example and it's not part of library. Library renders DOCX into HTML, so it can't be efficiently used for thumbnails. 
-
-Table of contents is built using the TOC fields and there is no efficient way to get table of contents at this point, since fields is not supported yet (http://officeopenxml.com/WPtableOfContents.php)
-
-Breaks
-------
-Currently library does break pages:
-- if user/manual page break `<w:br w:type="page"/>` is inserted - when user insert page break
-- if application page break `<w:lastRenderedPageBreak/>` is inserted - could be inserted by editor application like MS word (`ignoreLastRenderedPageBreak` should be set to false)
-- if page settings for paragraph is changed - ex: user change settings from portrait to landscape page
-
-Realtime page breaking is not implemented because it's requires re-calculation of sizes on each insertion and that could affect performance a lot. 
-
-If page breaking is crucial for you, I would recommend:
-- try to insert manual break point as much as you could
-- try use editors like MS Word, that inserts `<w:lastRenderedPageBreak/>` break points
-
-NOTE: by default `ignoreLastRenderedPageBreak` is set to `true`. You may need to set it to `false`, to make library break by `<w:lastRenderedPageBreak/>` break points
-
-Status and stability
-------
-So far I can't come up with final approach of parsing documents and final structure of API. Only **renderAsync** function is stable and definition shouldn't be changed in future. Inner implementation of parsing and rendering may be changed at any point of time.
-
-Contributing
-------
-Please do not include contents of `./dist` folder in your PR's. Otherwise I most likely will reject it due to stability and security concerns.
+The React viewer calls this repository's parser and renderer internally. Engine
+internals are not the React integration contract. Consult the source types for
+engine options, and preserve [LICENSE](LICENSE) and upstream attribution when
+distributing the derivative.

@@ -13,7 +13,8 @@ test("renders DOCX, PDF, and Markdown originals with their native adapters", asy
   await page.getByLabel("Example document").selectOption("consulting-pdf");
   const pdf = page.locator(".pdf-preview");
   await expect(pdf).toHaveAttribute("aria-busy", "false", { timeout: 30_000 });
-  await expect(pdf.locator(".pdf-preview__page")).toHaveCount(5);
+  // This original PDF has seven pages; the DOCX is a separate source fixture.
+  await expect(pdf.locator(".pdf-preview__page")).toHaveCount(7);
   await expect(pdf.locator("canvas").first()).toBeVisible();
 
   await page.getByLabel("Example document").selectOption("consulting-markdown");
