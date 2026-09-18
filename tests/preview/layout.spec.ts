@@ -111,6 +111,74 @@ test("preserves mixed A4 orientations in the complex DOCX", async ({ page }) => 
   ).toBeAttached();
 });
 
+test("keeps merged cells and repeats complex-document headers and footers", async ({
+  page,
+}) => {
+  await page.goto("/?fixture=complex-docx");
+  const preview = page.locator(".docx-preview");
+  await expect(preview).toHaveAttribute("aria-busy", "false", {
+    timeout: 60_000,
+  });
+
+  const pages = page.locator(".docx-render-target section.docx");
+  const structures = await pages.evaluateAll((sections) => ({
+    colSpans: sections
+      .flatMap((section) => [...section.querySelectorAll<HTMLTableCellElement>("td[colspan]")])
+      .map((cell) => cell.colSpan),
+    rowSpans: sections
+      .flatMap((section) => [...section.querySelectorAll<HTMLTableCellElement>("td[rowspan]")])
+      .map((cell) => cell.rowSpan),
+    headers: sections.map(
+      (section) => section.querySelector(":scope > header")?.textContent ?? "",
+    ),
+    footers: sections.map(
+      (section) => section.querySelector(":scope > footer")?.textContent ?? "",
+    ),
+  }));
+
+  expect(structures.colSpans.some((span) => span > 1)).toBe(true);
+  expect(structures.rowSpans.some((span) => span > 1)).toBe(true);
+  expect(
+    structures.headers.filter((text) => text.includes("Master Subscription Agreement"))
+      .length,
+  ).toBeGreaterThan(1);
+  expect(
+    structures.footers.filter((text) => text.includes("Vantage Shield BV")).length,
+  ).toBeGreaterThan(1);
+  expect(structures.headers.length).toBeGreaterThan(1);
+});
+
+test("fits a narrow viewport without changing logical page geometry", async ({ page }) => {
+  await page.setViewportSize({ width: 600, height: 900 });
+  await page.goto("/?fixture=consulting-docx");
+  const preview = page.locator(".docx-preview");
+  await expect(preview).toHaveAttribute("aria-busy", "false", {
+    timeout: 30_000,
+  });
+
+  const result = await page.locator(".docx-preview-viewport").evaluate((viewport) => {
+    const host = viewport.querySelector<HTMLElement>(".docx-preview");
+    const root = host?.shadowRoot;
+    const pageNode = root?.querySelector<HTMLElement>("section.docx");
+    const sizer = root?.querySelector<HTMLElement>(".docx-scale-sizer");
+    if (!pageNode || !sizer) throw new Error("DOCX layout is not ready");
+    const viewportStyle = getComputedStyle(viewport);
+    const viewportBounds = viewport.getBoundingClientRect();
+    const sizerBounds = sizer.getBoundingClientRect();
+    return {
+      logicalWidth: getComputedStyle(pageNode).width,
+      sizerLeft: sizerBounds.left,
+      sizerRight: sizerBounds.right,
+      availableLeft: viewportBounds.left + Number.parseFloat(viewportStyle.paddingLeft),
+      availableRight: viewportBounds.right - Number.parseFloat(viewportStyle.paddingRight),
+    };
+  });
+
+  expect(result.logicalWidth).toBe("816px");
+  expect(result.sizerLeft).toBeGreaterThanOrEqual(result.availableLeft - 1);
+  expect(result.sizerRight).toBeLessThanOrEqual(result.availableRight + 1);
+});
+
 test("updates review items without rereading the DOCX or replacing unaffected pages", async ({
   page,
 }) => {
@@ -185,4 +253,77 @@ test("updates review items without rereading the DOCX or replacing unaffected pa
         ).__docxArrayBufferReads,
     ),
   ).toBe(readsBefore);
+});
+
+test("retries a failed paragraph together with the next unrelated update", async ({ page }) => {
+  await page.addInitScript(() => {
+    const originalAppend = ShadowRoot.prototype.append;
+    const testWindow = window as typeof window & {
+      __failNextIncrementalAppend?: boolean;
+      __incrementalAppendCount?: number;
+    };
+    testWindow.__failNextIncrementalAppend = false;
+    testWindow.__incrementalAppendCount = 0;
+    ShadowRoot.prototype.append = function append(...nodes: (Node | string)[]) {
+      const incremental = nodes.some(
+        (node) =>
+          node instanceof HTMLElement &&
+          node.classList.contains("docx-incremental-stage"),
+      );
+      if (incremental) {
+        testWindow.__incrementalAppendCount =
+          (testWindow.__incrementalAppendCount ?? 0) + 1;
+        if (testWindow.__failNextIncrementalAppend) {
+          testWindow.__failNextIncrementalAppend = false;
+          throw new Error("Injected one-shot incremental layout failure");
+        }
+      }
+      return originalAppend.apply(this, nodes);
+    };
+  });
+  await page.goto("/?fixture=consulting-docx");
+  await page.getByRole("button", { name: "Review" }).click();
+
+  const preview = page.locator(".docx-preview");
+  await expect(preview).toHaveAttribute("aria-busy", "false", {
+    timeout: 30_000,
+  });
+  const target = page.locator(".docx-render-target");
+  const initialRevision = await target.getAttribute("data-docx-live-revision");
+  const lastGoodText = await target.textContent();
+
+  await page.evaluate(() => {
+    (
+      window as typeof window & { __failNextIncrementalAppend?: boolean }
+    ).__failNextIncrementalAppend = true;
+  });
+  await page.getByTestId("item-update").click();
+  await expect(page.getByRole("alert")).toContainText(
+    "Injected one-shot incremental layout failure",
+  );
+  await expect(target).toHaveAttribute("data-docx-live-revision", initialRevision!);
+  expect(await target.textContent()).toBe(lastGoodText);
+
+  await page.waitForTimeout(250);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as typeof window & { __incrementalAppendCount?: number })
+          .__incrementalAppendCount,
+    ),
+  ).toBe(1);
+
+  await page.getByTestId("item-add").click();
+  await expect(target).not.toHaveAttribute("data-docx-live-revision", initialRevision!, {
+    timeout: 30_000,
+  });
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect
+    .poll(() => target.textContent())
+    .toContain(
+      "Company will pay all agreed professional fees after receiving a valid invoice",
+    );
+  await expect(
+    page.locator('.docx-preview [data-docx-comment-ids*="comment-payment"]'),
+  ).not.toHaveCount(0);
 });

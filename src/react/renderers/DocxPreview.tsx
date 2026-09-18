@@ -654,9 +654,11 @@ export function DocxPreview({
                   prepared = undefined;
                   paragraphIds.forEach((id) => pendingParagraphIds.add(id));
                   if (!updateIsCurrent()) continue;
-                  pendingParagraphIds.clear();
                   host.setAttribute("aria-busy", "false");
                   onRefreshErrorRef.current?.(toErrorMessage(error));
+                  // Keep the failed paragraphs for the next source change. Retrying
+                  // here would spin forever when the layout failure is persistent.
+                  break;
                 }
               }
             } finally {

@@ -5,3 +5,6 @@ hashes in `provenance.json` identify the exact source files copied from `/Users/
 
 The example's fake backend maps Markdown and PDF originals to the corresponding DOCX. It performs no conversion and no
 network request outside the local example server.
+
+Native tracked-change coverage builds a minimal DOCX from inline synthetic OOXML in
+`tests/preview/syntheticDocx.ts`. That generated test document has no external or customer source.

@@ -4,6 +4,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -13,6 +14,11 @@ import { PreviewModeControl } from "./PreviewModeControl";
 import { ReviewPanel } from "./ReviewPanel";
 import { ZoomControls } from "./ZoomControls";
 import type { ReviewSelectionRequest } from "./renderers/reviewNavigation";
+import {
+  captureReadingPosition,
+  restoreReadingPosition,
+  type ReadingPosition,
+} from "./renderers/readingPosition";
 import type {
   DocumentPreviewProps,
   PdfPreviewAssets,
@@ -41,6 +47,22 @@ type PreviewView = {
   format: PreviewDocument["format"];
   file: File;
 };
+
+type PendingReadingPosition = {
+  identityKey: string;
+  mode: PreviewMode;
+  position: ReadingPosition;
+};
+
+const READING_NAVIGATION_KEYS = new Set([
+  " ",
+  "ArrowDown",
+  "ArrowUp",
+  "End",
+  "Home",
+  "PageDown",
+  "PageUp",
+]);
 
 const fileIds = new WeakMap<File, number>();
 let nextFileId = 0;
@@ -208,6 +230,14 @@ export function DocumentPreview({
   const viewportRef = useRef<HTMLElement>(null);
   const selectionSequence = useRef(0);
   const requestedPreparationKey = useRef<string | null>(null);
+  const readingPositions = useRef(
+    new Map<string, Map<PreviewMode, ReadingPosition>>(),
+  );
+  const pendingPosition = useRef<PendingReadingPosition | null>(null);
+  const restoreGeneration = useRef(0);
+  const previewReady = useRef(false);
+  const committedViewRef = useRef<PreviewView | null>(null);
+  const previousDesiredKey = useRef<string | null>(null);
   const [zoomChoice, setZoomChoice] = useState<number | null>(null);
   const [pageWidth, setPageWidth] = useState(794);
   const [viewportWidth, setViewportWidth] = useState(794);
@@ -256,9 +286,150 @@ export function DocumentPreview({
   const desiredKeyRef = useRef(desired?.key ?? null);
   desiredKeyRef.current = desired?.key ?? null;
   const validCommitted = committed?.identityKey === originalIdentityKey ? committed : null;
+  committedViewRef.current = validCommitted;
   const target = desired?.key === validCommitted?.key ? null : desired;
   const visible = validCommitted ?? target;
   const isStaging = Boolean(validCommitted && target);
+
+  const cancelPendingRestore = useCallback(() => {
+    pendingPosition.current = null;
+    restoreGeneration.current += 1;
+  }, []);
+
+  const captureForView = useCallback((view: PreviewView) => {
+    const viewport = viewportRef.current;
+    if (!viewport) return null;
+    const position = captureReadingPosition(viewport);
+    let positionsByMode = readingPositions.current.get(view.identityKey);
+    if (!positionsByMode) {
+      positionsByMode = new Map();
+      readingPositions.current.set(view.identityKey, positionsByMode);
+    }
+    positionsByMode.set(view.mode, position);
+    return position;
+  }, []);
+
+  const restorePendingPosition = useCallback((view: PreviewView) => {
+    const pending = pendingPosition.current;
+    if (
+      !pending ||
+      pending.identityKey !== view.identityKey ||
+      pending.mode !== view.mode
+    ) {
+      return;
+    }
+    const generation = ++restoreGeneration.current;
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        const viewport = viewportRef.current;
+        if (
+          !viewport ||
+          generation !== restoreGeneration.current ||
+          pendingPosition.current !== pending
+        ) {
+          return;
+        }
+        restoreReadingPosition(viewport, pending.position);
+        window.setTimeout(() => {
+          if (
+            generation === restoreGeneration.current &&
+            pendingPosition.current === pending &&
+            viewport === viewportRef.current
+          ) {
+            restoreReadingPosition(viewport, pending.position, true);
+            pendingPosition.current = null;
+          }
+        }, 200);
+      }),
+    );
+  }, []);
+
+  useLayoutEffect(() => {
+    const nextKey = desired?.key ?? null;
+    if (nextKey === previousDesiredKey.current) return;
+    previousDesiredKey.current = nextKey;
+    restoreGeneration.current += 1;
+
+    if (!desired) {
+      pendingPosition.current = null;
+      previewReady.current = false;
+      return;
+    }
+
+    const current = committedViewRef.current;
+    if (current?.key === desired.key) {
+      const saved = readingPositions.current
+        .get(desired.identityKey)
+        ?.get(desired.mode);
+      pendingPosition.current = saved
+        ? {
+            identityKey: desired.identityKey,
+            mode: desired.mode,
+            position: saved,
+          }
+        : null;
+      previewReady.current = true;
+      if (saved) restorePendingPosition(current);
+      return;
+    }
+
+    let currentPosition =
+      pendingPosition.current?.identityKey === desired.identityKey
+        ? pendingPosition.current.position
+        : null;
+    if (
+      current &&
+      current.identityKey === desired.identityKey &&
+      previewReady.current
+    ) {
+      currentPosition = captureForView(current);
+    }
+
+    const saved = readingPositions.current
+      .get(desired.identityKey)
+      ?.get(desired.mode);
+    const carriesCurrentPosition =
+      current?.identityKey === desired.identityKey &&
+      current.format === "docx" &&
+      (desired.mode === "review" || desired.mode === "final");
+    const position = saved ?? (carriesCurrentPosition ? currentPosition : null);
+    pendingPosition.current = position
+      ? { identityKey: desired.identityKey, mode: desired.mode, position }
+      : null;
+    previewReady.current = false;
+  }, [captureForView, desired, restorePendingPosition]);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    let scrollFrame = 0;
+    const cancel = () => cancelPendingRestore();
+    const cancelFromKey = (event: globalThis.KeyboardEvent) => {
+      if (READING_NAVIGATION_KEYS.has(event.key)) cancel();
+    };
+    const saveScrolledPosition = () => {
+      cancelAnimationFrame(scrollFrame);
+      scrollFrame = requestAnimationFrame(() => {
+        const current = committedViewRef.current;
+        if (current && previewReady.current && !pendingPosition.current) {
+          captureForView(current);
+        }
+      });
+    };
+    viewport.addEventListener("wheel", cancel, { passive: true });
+    viewport.addEventListener("touchstart", cancel, { passive: true });
+    viewport.addEventListener("pointerdown", cancel);
+    viewport.addEventListener("keydown", cancelFromKey);
+    viewport.addEventListener("scroll", saveScrolledPosition, { passive: true });
+    return () => {
+      cancelAnimationFrame(scrollFrame);
+      viewport.removeEventListener("wheel", cancel);
+      viewport.removeEventListener("touchstart", cancel);
+      viewport.removeEventListener("pointerdown", cancel);
+      viewport.removeEventListener("keydown", cancelFromKey);
+      viewport.removeEventListener("scroll", saveScrolledPosition);
+    };
+  }, [cancelPendingRestore, captureForView, originalIdentityKey]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -309,22 +480,26 @@ export function DocumentPreview({
   const commitView = useCallback(
     (view: PreviewView, pageCount: number) => {
       if (desiredKeyRef.current !== view.key) return;
+      previewReady.current = true;
       setCommitted(view);
       setPages(pageCount);
       setRenderError(null);
       setRefreshError(null);
       onLoad?.({ mode: view.mode, pages: pageCount });
+      restorePendingPosition(view);
     },
-    [onLoad],
+    [onLoad, restorePendingPosition],
   );
 
   const failView = useCallback(
     (view: PreviewView, message: string) => {
       if (desiredKeyRef.current !== view.key) return;
+      previewReady.current = false;
+      cancelPendingRestore();
       setRenderError({ key: view.key, message });
       onError?.(message);
     },
-    [onError],
+    [cancelPendingRestore, onError],
   );
 
   const refreshFailed = useCallback(
@@ -346,10 +521,34 @@ export function DocumentPreview({
 
   const selectEntity = useCallback(
     (entityId: string, origin: ReviewSelectionRequest["origin"]) => {
+      cancelPendingRestore();
       setSelection({ entityId, origin, sequence: ++selectionSequence.current });
     },
-    [],
+    [cancelPendingRestore],
   );
+
+  function changeZoom(next: number | null) {
+    const current = committedViewRef.current;
+    if (
+      current &&
+      previewReady.current &&
+      desiredKeyRef.current === current.key &&
+      !pendingPosition.current
+    ) {
+      const position = captureForView(current);
+      if (position) {
+        pendingPosition.current = {
+          identityKey: current.identityKey,
+          mode: current.mode,
+          position,
+        };
+      }
+    }
+    setZoomChoice(next);
+    if (current && previewReady.current && desiredKeyRef.current === current.key) {
+      restorePendingPosition(current);
+    }
+  }
 
   function changeMode(next: PreviewMode) {
     if (next === "final" && !workingFile) return;
@@ -407,7 +606,7 @@ export function DocumentPreview({
           <ZoomControls
             zoom={zoom}
             fit={zoomChoice === null}
-            onChange={setZoomChoice}
+            onChange={changeZoom}
           />
           <div className="docx-preview-status" role="status" aria-label="Preview status" aria-live="polite">
             {status}

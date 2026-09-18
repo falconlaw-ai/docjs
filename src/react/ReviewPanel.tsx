@@ -19,6 +19,15 @@ type ReviewPanelProps = {
   onSelectEntity: (entityId: string) => void;
 };
 
+const INTERACTIVE_REVIEW_CONTENT =
+  "button, a, input, select, textarea, summary, [contenteditable], [data-review-action]";
+
+function hasInteractiveTarget(target: EventTarget, currentTarget: HTMLElement) {
+  const interactive =
+    target instanceof Element ? target.closest(INTERACTIVE_REVIEW_CONTENT) : null;
+  return interactive !== null && interactive !== currentTarget;
+}
+
 function diagnosticFor(entity: ProjectedEntity | undefined, projectionReady: boolean) {
   if (!entity) return projectionReady ? "The renderer did not return this review item." : null;
   if (entity.status === "invalid" || entity.status === "conflict") {
@@ -61,15 +70,13 @@ export function ReviewPanel({
 
   function keyDown(event: KeyboardEvent<HTMLElement>, entityId: string) {
     if (event.key !== "Enter" && event.key !== " ") return;
+    if (hasInteractiveTarget(event.target, event.currentTarget)) return;
     event.preventDefault();
     onSelectEntity(entityId);
   }
 
   function click(event: MouseEvent<HTMLElement>, entityId: string) {
-    const interactive = (event.target as Element).closest(
-      "button, a, input, select, textarea, [data-review-action]",
-    );
-    if (interactive && interactive !== event.currentTarget) return;
+    if (hasInteractiveTarget(event.target, event.currentTarget)) return;
     const textSelection = window.getSelection();
     if (textSelection && !textSelection.isCollapsed) return;
     onSelectEntity(entityId);

@@ -56,3 +56,23 @@ test("custom cards keep selection and expose consumer actions", async ({ page })
   await card.click();
   await expect(card).toHaveAttribute("aria-pressed", "true");
 });
+
+for (const key of ["Enter", "Space"] as const) {
+  test(`custom-card actions handle ${key} without activating their wrapper`, async ({
+    page,
+  }) => {
+    await page.goto("/?fixture=consulting-docx&cards=custom");
+    await page.getByRole("button", { name: "Review" }).click();
+    await expect(page.locator(".docx-preview-status")).toContainText("Review view", {
+      timeout: 30_000,
+    });
+
+    const card = page.locator('[data-review-item-id="redline-consultant"]');
+    const action = card.getByRole("button", { name: "Record consumer action" });
+    await action.focus();
+    await action.press(key);
+
+    await expect(page.getByTestId("consumer-action")).toHaveText("redline-consultant");
+    await expect(card).not.toHaveAttribute("aria-pressed", "true");
+  });
+}

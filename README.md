@@ -102,6 +102,8 @@ the POC's accepted-looking projection of native Word tracked changes.
 Item updates reuse the document source and patch affected paragraphs, then
 repaginate the affected section tail. They do not rebuild a DOCX ZIP. Switching
 modes may reparse and repaginate the prepared document; it does not reconvert it.
+A document keeps a separate reading position for Original, Review, and Final,
+and preserves text continuity when switching between fit-width and manual zoom.
 A failed update preserves the last committed rendering and reports a refresh
 error through `onRefreshError`.
 

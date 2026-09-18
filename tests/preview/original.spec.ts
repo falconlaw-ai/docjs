@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { nativeRevisionDocx } from "./syntheticDocx";
+
 test("renders DOCX, PDF, and Markdown originals with their native adapters", async ({
   page,
 }) => {
@@ -68,6 +70,44 @@ test("fits original pages without changing their logical geometry", async ({
       }),
     )
     .toEqual(logicalSize);
+});
+
+test("projects native Word revisions in Review and Final", async ({ page }) => {
+  await page.goto("/?fixture=consulting-docx");
+  await page.getByLabel("Open a document").setInputFiles({
+    name: "native-revisions.docx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    buffer: await nativeRevisionDocx(),
+  });
+
+  await page.getByRole("button", { name: "Review" }).click();
+  await expect(page.locator(".docx-preview-status")).toContainText("Review view", {
+    timeout: 30_000,
+  });
+  const review = page.locator(".docx-render-target");
+  await expect(review.locator("del")).toHaveText("old wording");
+  await expect(review.locator("ins")).toHaveText("new wording");
+
+  await page.getByRole("button", { name: "Final" }).click();
+  await expect(page.locator(".docx-preview-status")).toContainText("Final view", {
+    timeout: 30_000,
+  });
+  const final = page.locator(".docx-render-target");
+  await expect(final.locator("del, ins")).toHaveCount(0);
+  await expect(final).toContainText("Native revision says new wording.");
+  await expect(final).not.toContainText("old wording");
+});
+
+test("serves the packaged PDF.js ICC profile instead of the application shell", async ({
+  request,
+}) => {
+  const response = await request.get("/pdfjs/iccs/CGATS001Compat-v2-micro.icc");
+  expect(response.ok()).toBe(true);
+  expect(response.headers()["content-type"]).not.toContain("text/html");
+  const profile = await response.body();
+  expect(profile.byteLength).toBe(8_464);
+  expect(profile.subarray(36, 40).toString("ascii")).toBe("acsp");
 });
 
 test("does not fetch an external image supplied by a Markdown document", async ({

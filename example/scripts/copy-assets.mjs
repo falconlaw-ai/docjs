@@ -18,7 +18,7 @@ cpSync(
   resolve(pdfRoot, "pdf.worker.min.mjs"),
   { force: true },
 );
-for (const directory of ["cmaps", "standard_fonts", "wasm"]) {
+for (const directory of ["cmaps", "iccs", "standard_fonts", "wasm"]) {
   cpSync(
     resolve(repositoryRoot, `node_modules/pdfjs-dist/${directory}`),
     resolve(pdfRoot, directory),
