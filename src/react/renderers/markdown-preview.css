@@ -1,0 +1,275 @@
+.markdown-preview {
+  box-sizing: border-box;
+  width: min(794px, 100%);
+  min-height: 1123px;
+  margin: 0 auto;
+  padding: clamp(32px, 7vw, 72px) clamp(24px, 8vw, 76px);
+  overflow-wrap: break-word;
+  color: #242424;
+  background: #fff;
+  border-radius: 3px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 12%);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+  line-height: 1.65;
+  text-rendering: optimizeLegibility;
+}
+
+.markdown-preview > :first-child {
+  margin-top: 0;
+}
+
+.markdown-preview > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-preview h1,
+.markdown-preview h2,
+.markdown-preview h3,
+.markdown-preview h4,
+.markdown-preview h5,
+.markdown-preview h6 {
+  color: #171717;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-weight: 650;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.markdown-preview h1 {
+  margin: 0 0 2rem;
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  letter-spacing: -0.025em;
+}
+
+.markdown-preview h2 {
+  margin: 2.5rem 0 0.8rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid #dedede;
+  font-size: 1.35rem;
+  letter-spacing: -0.01em;
+}
+
+.markdown-preview h3 {
+  margin: 1.75rem 0 0.65rem;
+  font-size: 1.1rem;
+}
+
+.markdown-preview h4,
+.markdown-preview h5,
+.markdown-preview h6 {
+  margin: 1.4rem 0 0.55rem;
+  font-size: 1rem;
+}
+
+.markdown-preview p {
+  margin: 0.75rem 0;
+}
+
+.markdown-preview a {
+  color: #1859a9;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.15em;
+}
+
+.markdown-preview a:hover {
+  color: #0d3e7a;
+}
+
+.markdown-preview a:focus-visible {
+  outline: 2px solid #1859a9;
+  outline-offset: 2px;
+  border-radius: 1px;
+}
+
+.markdown-preview strong {
+  color: #171717;
+}
+
+.markdown-preview ul,
+.markdown-preview ol {
+  margin: 0.85rem 0;
+  padding-left: 1.65rem;
+}
+
+.markdown-preview li {
+  margin: 0.28rem 0;
+  padding-left: 0.2rem;
+}
+
+.markdown-preview li > ul,
+.markdown-preview li > ol {
+  margin-block: 0.3rem;
+}
+
+.markdown-preview blockquote {
+  margin: 1.2rem 0;
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  color: #555;
+  border-left: 3px solid #c8c8c8;
+}
+
+.markdown-preview blockquote > :first-child {
+  margin-top: 0;
+}
+
+.markdown-preview blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-preview hr {
+  margin: 2.25rem 0;
+  border: 0;
+  border-top: 1px solid #d8d8d8;
+}
+
+.markdown-preview code {
+  padding: 0.12em 0.32em;
+  background: #f3f3f3;
+  border-radius: 3px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.86em;
+}
+
+.markdown-preview pre {
+  max-width: 100%;
+  margin: 1rem 0;
+  padding: 1rem;
+  overflow-x: auto;
+  color: #f4f4f4;
+  background: #252525;
+  border-radius: 3px;
+  line-height: 1.5;
+}
+
+.markdown-preview pre code {
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  font-size: 0.83rem;
+}
+
+.markdown-preview__table-scroll {
+  max-width: 100%;
+  margin: 1.25rem 0;
+  overflow-x: auto;
+}
+
+.markdown-preview table {
+  width: 100%;
+  border-spacing: 0;
+  border-collapse: collapse;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.markdown-preview th,
+.markdown-preview td {
+  min-width: 7rem;
+  padding: 0.6rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+  border: 1px solid #d3d3d3;
+}
+
+.markdown-preview th {
+  color: #171717;
+  background: #f2f2f2;
+  font-weight: 650;
+}
+
+.markdown-preview tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+.markdown-preview img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1.2rem auto;
+}
+
+.markdown-preview__image-placeholder {
+  display: inline-block;
+  max-width: 100%;
+  padding: 0.15rem 0.45rem;
+  overflow: hidden;
+  color: #666;
+  background: #f4f4f4;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.markdown-preview del {
+  color: #666;
+}
+
+.markdown-preview input[type="checkbox"] {
+  margin: 0 0.35rem 0 0;
+  accent-color: #1859a9;
+}
+
+.markdown-preview__status {
+  margin: 0;
+  color: #5c5c5c;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 600px) {
+  .markdown-preview {
+    min-height: 100%;
+    border-radius: 3px;
+    font-size: 14px;
+  }
+
+  .markdown-preview th,
+  .markdown-preview td {
+    min-width: 6rem;
+    padding: 0.5rem;
+  }
+}
+
+@media print {
+  .markdown-preview {
+    width: 100%;
+    min-height: auto;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .markdown-preview a {
+    color: inherit;
+  }
+}
