@@ -54,6 +54,27 @@ test("settings control the viewer without resetting review content", async ({ pa
   await expect(settingsButton).toHaveAttribute("aria-expanded", "false");
 });
 
+test("does not move focus after the user selects another settings field", async ({
+  page,
+}) => {
+  await page.goto("/?fixture=consulting-markdown");
+  await waitForCommittedMode(page, "original");
+  await page.evaluate(() => {
+    const requestFrame = window.requestAnimationFrame;
+    window.requestAnimationFrame = (callback) => {
+      window.requestAnimationFrame = requestFrame;
+      return window.setTimeout(() => callback(performance.now()), 150);
+    };
+  });
+
+  await page.getByRole("button", { name: "Viewer settings" }).click();
+  const maximumZoom = page.getByLabel("Maximum zoom");
+  await maximumZoom.focus();
+  await expect(maximumZoom).toBeFocused();
+  await page.waitForTimeout(200);
+  await expect(maximumZoom).toBeFocused();
+});
+
 test("settings persist across dismissal and document changes", async ({ page }) => {
   await page.goto("/?fixture=consulting-markdown");
   await waitForCommittedMode(page, "original");

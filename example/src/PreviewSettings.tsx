@@ -67,6 +67,7 @@ export function PreviewSettings({
       popover.style.maxHeight = `${Math.max(0, window.innerHeight - top - viewportGap)}px`;
     };
     placePopover();
+    firstInputRef.current?.focus();
     window.addEventListener("resize", placePopover);
     window.addEventListener("scroll", placePopover, true);
     return () => {
@@ -77,7 +78,6 @@ export function PreviewSettings({
 
   useEffect(() => {
     if (!open) return;
-    const focusFrame = requestAnimationFrame(() => firstInputRef.current?.focus());
     const closeFromPointer = (event: PointerEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     };
@@ -90,7 +90,6 @@ export function PreviewSettings({
     document.addEventListener("pointerdown", closeFromPointer);
     document.addEventListener("keydown", closeFromKeyboard);
     return () => {
-      cancelAnimationFrame(focusFrame);
       document.removeEventListener("pointerdown", closeFromPointer);
       document.removeEventListener("keydown", closeFromKeyboard);
     };
