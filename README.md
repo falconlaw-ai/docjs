@@ -121,7 +121,9 @@ recalculates fit width without reloading the document.
 default to `true`. They hide viewer controls or the review sidebar without
 changing the controlled mode, zoom, review items, selection, or rendered review
 highlights. This lets an application provide its own controls while keeping the
-same preview state. Hiding the review panel also removes its layout column.
+same preview state. Hiding the review panel also removes its layout column. At
+fit width, hiding or showing the panel preserves the current text anchor while
+the document refits.
 
 ## Custom cards and appearance
 

@@ -276,10 +276,13 @@ export function DocumentPreview({
     new Map<string, Map<PreviewMode, ReadingPosition>>(),
   );
   const pendingPosition = useRef<PendingReadingPosition | null>(null);
+  const panelRestorePosition = useRef<PendingReadingPosition | null>(null);
   const restoreGeneration = useRef(0);
   const previewReady = useRef(false);
   const committedViewRef = useRef<PreviewView | null>(null);
   const previousDesiredKey = useRef<string | null>(null);
+  const requestedModeRef = useRef(mode);
+  requestedModeRef.current = mode;
   const requestedZoomRange = normalizeZoomRange(minZoom, maxZoom);
   const [zoomState, setZoomState] = useState<ZoomState>(() => ({
     ...requestedZoomRange,
@@ -298,6 +301,8 @@ export function DocumentPreview({
   const [entities, setEntities] = useState<readonly ProjectedEntity[]>([]);
   const [projectionReady, setProjectionReady] = useState(false);
   const [selection, setSelection] = useState<ReviewSelectionRequest | null>(null);
+  const zoomChoiceRef = useRef(zoomState.choice);
+  zoomChoiceRef.current = zoomState.choice;
 
   const originalIdentityKey = identityKey(original);
   const matchingPreparation =
@@ -397,6 +402,43 @@ export function DocumentPreview({
       }),
     );
   }, []);
+
+  useLayoutEffect(() => {
+    const panelPending = panelRestorePosition.current;
+    panelRestorePosition.current = null;
+    const current = committedViewRef.current;
+    if (
+      current &&
+      panelPending &&
+      pendingPosition.current === panelPending
+    ) {
+      restorePendingPosition(current);
+    }
+    return () => {
+      panelRestorePosition.current = null;
+      const view = committedViewRef.current;
+      if (
+        !view ||
+        requestedModeRef.current !== "review" ||
+        zoomChoiceRef.current !== null ||
+        !previewReady.current ||
+        desiredKeyRef.current !== view.key ||
+        pendingPosition.current
+      ) {
+        return;
+      }
+      const position = captureForView(view);
+      if (position) {
+        const pending = {
+          identityKey: view.identityKey,
+          mode: view.mode,
+          position,
+        };
+        pendingPosition.current = pending;
+        panelRestorePosition.current = pending;
+      }
+    };
+  }, [captureForView, restorePendingPosition, showReviewPanel]);
 
   useLayoutEffect(() => {
     const nextKey = desired?.key ?? null;
