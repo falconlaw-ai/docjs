@@ -68,12 +68,9 @@ button, input, select { font: inherit; }
   stroke-width: 1.35;
 }
 .example-settings-popover {
-  position: absolute;
+  position: fixed;
   z-index: 50;
-  top: calc(100% + 8px);
-  right: 0;
   width: min(328px, calc(100vw - 24px));
-  max-height: calc(100vh - 76px);
   overflow: auto;
   padding: 16px;
   border: 1px solid #cdd1c6;
@@ -161,5 +158,4 @@ button, input, select { font: inherit; }
 @media (max-width: 520px) {
   .example-toolbar { flex-wrap: wrap; }
   .example-actions { width: 100%; max-width: none; justify-content: flex-start; }
-  .example-settings-popover { right: auto; left: 0; }
 }

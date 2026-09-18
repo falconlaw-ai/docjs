@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { expect, test } from "@playwright/test";
+import { waitForCommittedMode } from "./helpers";
 
 function normalizedHash(parts: readonly string[]): {
   characters: number;
@@ -198,7 +199,9 @@ test("updates review items without rereading the DOCX or replacing unaffected pa
     };
   });
   await page.goto("/?fixture=consulting-docx");
+  await waitForCommittedMode(page, "original");
   await page.getByRole("button", { name: "Review" }).click();
+  await waitForCommittedMode(page, "review");
 
   const preview = page.locator(".docx-preview");
   await expect(preview).toHaveAttribute("aria-busy", "false", {

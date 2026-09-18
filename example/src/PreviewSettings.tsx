@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 type PreviewSettingsProps = {
   minimumZoom: string;
@@ -42,6 +42,38 @@ export function PreviewSettings({
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const firstInputRef = useRef<HTMLInputElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const placePopover = () => {
+      const button = buttonRef.current;
+      const popover = popoverRef.current;
+      if (!button || !popover) return;
+      const viewportGap = 12;
+      const width = Math.min(328, window.innerWidth - viewportGap * 2);
+      const buttonBounds = button.getBoundingClientRect();
+      const left = Math.max(
+        viewportGap,
+        Math.min(
+          buttonBounds.right - width,
+          window.innerWidth - width - viewportGap,
+        ),
+      );
+      const top = buttonBounds.bottom + 8;
+      popover.style.width = `${width}px`;
+      popover.style.left = `${left}px`;
+      popover.style.top = `${top}px`;
+      popover.style.maxHeight = `${Math.max(0, window.innerHeight - top - viewportGap)}px`;
+    };
+    placePopover();
+    window.addEventListener("resize", placePopover);
+    window.addEventListener("scroll", placePopover, true);
+    return () => {
+      window.removeEventListener("resize", placePopover);
+      window.removeEventListener("scroll", placePopover, true);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -79,6 +111,7 @@ export function PreviewSettings({
       </button>
       {open && (
         <div
+          ref={popoverRef}
           id="preview-settings-popover"
           className="example-settings-popover"
           role="group"

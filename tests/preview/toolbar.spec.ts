@@ -88,16 +88,24 @@ test("keeps the settings popover inside narrow viewports", async ({ page }) => {
   const picker = page.getByLabel("Example document");
   await settingsButton.click();
   const popover = page.getByRole("group", { name: "Preview settings" });
-  const [buttonBox, pickerBox, popoverBox] = await Promise.all([
-    settingsButton.boundingBox(),
-    picker.boundingBox(),
-    popover.boundingBox(),
-  ]);
-  expect(buttonBox).not.toBeNull();
-  expect(pickerBox).not.toBeNull();
-  expect(popoverBox).not.toBeNull();
-  expect(buttonBox!.x + buttonBox!.width).toBeLessThanOrEqual(pickerBox!.x);
-  expect(popoverBox!.x).toBeGreaterThanOrEqual(0);
-  expect(popoverBox!.x + popoverBox!.width).toBeLessThanOrEqual(320);
-  expect(popoverBox!.y + popoverBox!.height).toBeLessThanOrEqual(700);
+  for (const width of [320, 521, 540, 560, 600]) {
+    await page.setViewportSize({ width, height: 700 });
+    const [buttonBox, pickerBox, popoverBox] = await Promise.all([
+      settingsButton.boundingBox(),
+      picker.boundingBox(),
+      popover.boundingBox(),
+    ]);
+    expect(buttonBox).not.toBeNull();
+    expect(pickerBox).not.toBeNull();
+    expect(popoverBox).not.toBeNull();
+    expect(buttonBox!.x + buttonBox!.width).toBeLessThanOrEqual(pickerBox!.x);
+    expect(popoverBox!.x).toBeGreaterThanOrEqual(0);
+    expect(popoverBox!.x + popoverBox!.width).toBeLessThanOrEqual(width);
+    expect(popoverBox!.y + popoverBox!.height).toBeLessThanOrEqual(700);
+  }
+
+  await page.setViewportSize({ width: 320, height: 330 });
+  const shortPopoverBox = await popover.boundingBox();
+  expect(shortPopoverBox).not.toBeNull();
+  expect(shortPopoverBox!.y + shortPopoverBox!.height).toBeLessThanOrEqual(330);
 });
