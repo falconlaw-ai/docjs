@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { waitForCommittedMode } from "./helpers";
 
 type ReadingState = {
   progress: number;
@@ -6,9 +7,7 @@ type ReadingState = {
 };
 
 async function waitForMode(page: Page, mode: "Original" | "Review" | "Final") {
-  await expect(page.locator(".docx-preview-status")).toContainText(`${mode} view`, {
-    timeout: 30_000,
-  });
+  await waitForCommittedMode(page, mode.toLowerCase() as "original" | "review" | "final");
   await page.waitForTimeout(350);
 }
 

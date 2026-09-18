@@ -108,7 +108,7 @@ A failed update preserves the last committed rendering and reports a refresh
 error through `onRefreshError`.
 
 Set `minZoom` and `maxZoom` as percentages to narrow the viewer's absolute
-25% to 200% range. They default to 25 and 200. Nonfinite values use those defaults;
+20% to 200% range. They default to 20 and 200. Nonfinite values use those defaults;
 if the effective maximum is below the effective minimum, the range collapses to
 the minimum. `defaultZoom` accepts a percentage or `null`. A finite value is
 clamped to the effective range, while `undefined`, `null`, and nonfinite values
@@ -116,6 +116,12 @@ select fit width. The viewer applies the default on mount, when the document ID
 or revision changes, and when `defaultZoom` itself changes. Other rerenders keep
 the user's current zoom. Changing only the bounds clamps a manual zoom or
 recalculates fit width without reloading the document.
+
+`showModeControl`, `showZoomControls`, and `showReviewPanel` are optional and
+default to `true`. They hide viewer controls or the review sidebar without
+changing the controlled mode, zoom, review items, selection, or rendered review
+highlights. This lets an application provide its own controls while keeping the
+same preview state. Hiding the review panel also removes its layout column.
 
 ## Custom cards and appearance
 
@@ -126,10 +132,11 @@ and document-to-card scrolling. Use application callbacks from custom controls
 for business actions such as approval; the viewer has no approval policy.
 
 The default shell preserves the POC's grey background, white pages, small page
-corners, zoom controls, and review-card borders. Use `className` and `style` to
-adapt the shell. DOCX styles live in Shadow DOM so application CSS does not replace
-source typography. Zoom scales rendered pages rather than changing logical
-pagination.
+corners, compact light toolbar, zoom controls, and review-card borders. The
+toolbar shows the loaded page count beside the filename and format badge. Use
+`className` and `style` to adapt the shell. DOCX styles live in Shadow DOM so
+application CSS does not replace source typography. Zoom scales rendered pages
+rather than changing logical pagination.
 
 ## PDF resources and document isolation
 

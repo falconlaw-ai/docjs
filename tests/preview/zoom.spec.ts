@@ -1,18 +1,19 @@
 import { expect, test, type Page } from "@playwright/test";
+import { waitForCommittedMode } from "./helpers";
 
 async function waitForPreview(page: Page) {
-  await expect(page.locator(".docx-preview-status")).toContainText("Original view", {
-    timeout: 30_000,
-  });
+  await waitForCommittedMode(page, "original");
 }
 
 async function setZoomConfiguration(
   page: Page,
   values: { min?: string; max?: string; default?: string },
 ) {
-  if (values.min !== undefined) await page.getByLabel("Min %").fill(values.min);
-  if (values.max !== undefined) await page.getByLabel("Max %").fill(values.max);
-  if (values.default !== undefined) await page.getByLabel("Default %").fill(values.default);
+  await page.getByRole("button", { name: "Viewer settings" }).click();
+  if (values.min !== undefined) await page.getByLabel("Minimum zoom").fill(values.min);
+  if (values.max !== undefined) await page.getByLabel("Maximum zoom").fill(values.max);
+  if (values.default !== undefined) await page.getByLabel("Default zoom").fill(values.default);
+  await page.keyboard.press("Escape");
 }
 
 async function visibleTextAtTop(page: Page) {
@@ -77,7 +78,7 @@ test("normalizes configured bounds and clamps the default zoom", async ({ page }
   );
   await waitForPreview(page);
   await expect(zoom).toHaveValue("200");
-  await expect(zoom).toHaveAttribute("min", "25");
+  await expect(zoom).toHaveAttribute("min", "20");
   await expect(zoom).toHaveAttribute("max", "200");
 
   await page.goto(
@@ -85,7 +86,7 @@ test("normalizes configured bounds and clamps the default zoom", async ({ page }
   );
   await waitForPreview(page);
   await expect(zoom).toHaveValue("200");
-  await expect(zoom).toHaveAttribute("min", "25");
+  await expect(zoom).toHaveAttribute("min", "20");
   await expect(zoom).toHaveAttribute("max", "200");
 });
 
@@ -114,12 +115,15 @@ test("applies live configuration without remounting the document", async ({ page
   await page.getByTestId("item-add").click();
   await expect(zoom).toHaveValue("125");
 
-  await page.getByLabel("Min %").fill("100");
+  await page.getByRole("button", { name: "Viewer settings" }).click();
+  await page.getByLabel("Minimum zoom").fill("100");
   await expect(zoom).toHaveValue("125");
-  await page.getByLabel("Min %").fill("140");
+  await page.getByLabel("Minimum zoom").fill("140");
   await expect(zoom).toHaveValue("140");
+  await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Fit width" }).click();
-  await page.getByLabel("Max %").fill("100");
+  await page.getByRole("button", { name: "Viewer settings" }).click();
+  await page.getByLabel("Maximum zoom").fill("100");
   await expect(zoom).toHaveValue("140");
   await expect(zoom).toHaveAttribute("min", "140");
   await expect(zoom).toHaveAttribute("max", "140");
@@ -168,37 +172,9 @@ test("preserves reading position when live bounds clamp zoom", async ({ page }) 
   const zoom = page.getByLabel("Zoom percentage");
   await zoom.fill("100");
   await zoom.press("Enter");
-  await page.getByLabel("Min %").fill("140");
+  await page.getByRole("button", { name: "Viewer settings" }).click();
+  await page.getByLabel("Minimum zoom").fill("140");
   await expect(zoom).toHaveValue("140");
   await page.waitForTimeout(350);
   expect(await visibleTextAtTop(page)).toBe(before);
-});
-
-test("places the zoom configuration before the picker and wraps it on narrow screens", async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto("/?fixture=consulting-markdown");
-  const panel = page.getByRole("group", { name: "Zoom configuration" });
-  const picker = page.getByLabel("Example document");
-  await expect(panel).toBeVisible();
-  const desktopPanel = await panel.boundingBox();
-  const desktopPicker = await picker.boundingBox();
-  expect(desktopPanel).not.toBeNull();
-  expect(desktopPicker).not.toBeNull();
-  expect(desktopPanel!.x + desktopPanel!.width).toBeLessThanOrEqual(desktopPicker!.x);
-
-  await page.setViewportSize({ width: 600, height: 900 });
-  const narrowPanel = await panel.boundingBox();
-  const narrowPicker = await picker.boundingBox();
-  expect(narrowPanel).not.toBeNull();
-  expect(narrowPicker).not.toBeNull();
-  const overlaps =
-    narrowPanel!.x < narrowPicker!.x + narrowPicker!.width &&
-    narrowPanel!.x + narrowPanel!.width > narrowPicker!.x &&
-    narrowPanel!.y < narrowPicker!.y + narrowPicker!.height &&
-    narrowPanel!.y + narrowPanel!.height > narrowPicker!.y;
-  expect(overlaps).toBe(false);
-  expect(narrowPanel!.x + narrowPanel!.width).toBeLessThanOrEqual(600);
-  expect(narrowPicker!.x + narrowPicker!.width).toBeLessThanOrEqual(600);
 });

@@ -12,6 +12,7 @@ import {
   prepareFixture,
   type FixtureId,
 } from "./fakeBackend";
+import { PreviewSettings } from "./PreviewSettings";
 
 const initialItems: readonly ReviewItem[] = [
   {
@@ -126,6 +127,9 @@ export function App() {
     zoomInputFromUrl("maxZoom"),
   );
   const [defaultZoomInput, setDefaultZoomInput] = useState(defaultZoomInputFromUrl);
+  const [showModeControl, setShowModeControl] = useState(true);
+  const [showZoomControls, setShowZoomControls] = useState(true);
+  const [showReviewPanel, setShowReviewPanel] = useState(true);
 
   const minimumZoom = zoomValue(minimumZoomInput);
   const maximumZoom = zoomValue(maximumZoomInput);
@@ -290,43 +294,22 @@ export function App() {
           <h1>Document preview example</h1>
         </div>
         <div className="example-actions">
-          <div className="example-zoom-config" role="group" aria-label="Zoom configuration">
-            <label>
-              <span>Min %</span>
-              <input
-                aria-label="Min %"
-                type="number"
-                value={visibleNumberInput(minimumZoomInput)}
-                placeholder="25"
-                onChange={(event) => setMinimumZoomInput(event.currentTarget.value)}
-              />
-            </label>
-            <label>
-              <span>Max %</span>
-              <input
-                aria-label="Max %"
-                type="number"
-                value={visibleNumberInput(maximumZoomInput)}
-                placeholder="200"
-                onChange={(event) => setMaximumZoomInput(event.currentTarget.value)}
-              />
-            </label>
-            <label>
-              <span>Default %</span>
-              <input
-                aria-label="Default %"
-                type="number"
-                value={visibleNumberInput(defaultZoomInput.value)}
-                placeholder="Fit"
-                onChange={(event) =>
-                  setDefaultZoomInput({
-                    value: event.currentTarget.value,
-                    emptyValue: null,
-                  })
-                }
-              />
-            </label>
-          </div>
+          <PreviewSettings
+            minimumZoom={visibleNumberInput(minimumZoomInput)}
+            maximumZoom={visibleNumberInput(maximumZoomInput)}
+            defaultZoom={visibleNumberInput(defaultZoomInput.value)}
+            showModeControl={showModeControl}
+            showZoomControls={showZoomControls}
+            showReviewPanel={showReviewPanel}
+            onMinimumZoomChange={setMinimumZoomInput}
+            onMaximumZoomChange={setMaximumZoomInput}
+            onDefaultZoomChange={(value) =>
+              setDefaultZoomInput({ value, emptyValue: null })
+            }
+            onShowModeControlChange={setShowModeControl}
+            onShowZoomControlsChange={setShowZoomControls}
+            onShowReviewPanelChange={setShowReviewPanel}
+          />
           <label>
             <span>Example document</span>
             <select
@@ -382,6 +365,9 @@ export function App() {
             minZoom={minimumZoom}
             maxZoom={maximumZoom}
             defaultZoom={defaultZoom}
+            showModeControl={showModeControl}
+            showZoomControls={showZoomControls}
+            showReviewPanel={showReviewPanel}
             pdfAssets={{
               workerUrl: new URL("/pdfjs/pdf.worker.min.mjs", window.location.origin).href,
               resourceBaseUrl: new URL("/pdfjs/", window.location.origin).href,

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { waitForCommittedMode } from "./helpers";
 
 import { nativeRevisionDocx } from "./syntheticDocx";
 
@@ -82,17 +83,13 @@ test("projects native Word revisions in Review and Final", async ({ page }) => {
   });
 
   await page.getByRole("button", { name: "Review" }).click();
-  await expect(page.locator(".docx-preview-status")).toContainText("Review view", {
-    timeout: 30_000,
-  });
+  await waitForCommittedMode(page, "review");
   const review = page.locator(".docx-render-target");
   await expect(review.locator("del")).toHaveText("old wording");
   await expect(review.locator("ins")).toHaveText("new wording");
 
   await page.getByRole("button", { name: "Final" }).click();
-  await expect(page.locator(".docx-preview-status")).toContainText("Final view", {
-    timeout: 30_000,
-  });
+  await waitForCommittedMode(page, "final");
   const final = page.locator(".docx-render-target");
   await expect(final.locator("del, ins")).toHaveCount(0);
   await expect(final).toContainText("Native revision says new wording.");

@@ -54,6 +54,9 @@ export type DocumentPreviewProps = {
   minZoom?: number;
   maxZoom?: number;
   defaultZoom?: number | null;
+  showModeControl?: boolean;
+  showZoomControls?: boolean;
+  showReviewPanel?: boolean;
   className?: string;
   style?: CSSProperties;
   onLoad?: (result: { mode: PreviewMode; pages: number }) => void;

@@ -60,7 +60,7 @@ type ZoomState = {
   choice: number | null;
 };
 
-const ABSOLUTE_MINIMUM_ZOOM = 25;
+const ABSOLUTE_MINIMUM_ZOOM = 20;
 const ABSOLUTE_MAXIMUM_ZOOM = 200;
 
 function clampZoom(zoom: number, minimum: number, maximum: number) {
@@ -260,6 +260,9 @@ export function DocumentPreview({
   minZoom,
   maxZoom,
   defaultZoom,
+  showModeControl = true,
+  showZoomControls = true,
+  showReviewPanel = true,
   className,
   style,
   onLoad,
@@ -679,15 +682,14 @@ export function DocumentPreview({
       ? matchingPreparation.message
       : null;
   const currentMatchesRequest = validCommitted?.key === desired?.key;
-  const status = preparationPending
+  const pageStatus = currentMatchesRequest && validCommitted && pages !== null
+    ? `${pages} ${pages === 1 ? "page" : "pages"}`
+    : null;
+  const previewUpdate = preparationPending
     ? "Preparing review…"
-    : currentMatchesRequest && validCommitted
-      ? `${pages ?? "Preparing"} ${pages === 1 ? "page" : "pages"} · ${validCommitted.mode === "original" ? "Original" : validCommitted.mode === "review" ? "Review" : "Final"} view · Read only`
-      : target
-        ? "Preparing preview…"
-        : validCommitted
-          ? `${validCommitted.mode === "original" ? "Original" : validCommitted.mode === "review" ? "Review" : "Final"} view · Read only`
-          : "Preparing preview…";
+    : target || !validCommitted
+      ? "Preparing preview…"
+      : "";
   const slots = [validCommitted, target].filter(
     (view, index, list): view is PreviewView =>
       Boolean(view) && list.findIndex((candidate) => candidate?.key === view?.key) === index,
@@ -699,6 +701,7 @@ export function DocumentPreview({
       className={`docx-preview-shell${className ? ` ${className}` : ""}`}
       style={style}
       data-preview-mode={mode}
+      data-committed-mode={currentMatchesRequest && pages !== null ? validCommitted?.mode : undefined}
     >
       <div className="docx-preview-bar">
         <div className="docx-preview-document-info">
@@ -707,26 +710,35 @@ export function DocumentPreview({
             {original.file.name}
           </span>
           <span className="docx-preview-format-badge">{original.format === "md" ? "Markdown" : original.format.toUpperCase()}</span>
+          {pageStatus && (
+            <span className="docx-preview-status" role="status" aria-label="Preview status" aria-live="polite">
+              {pageStatus}
+            </span>
+          )}
         </div>
-        <PreviewModeControl
-          value={mode}
-          finalDisabled={!workingFile}
-          reviewPending={preparationPending}
-          onChange={changeMode}
-        />
-        <div className="docx-preview-controls">
-          <ZoomControls
-            zoom={zoom}
-            fit={zoomState.choice === null}
-            minimum={zoomState.minimum}
-            maximum={zoomState.maximum}
-            onChange={changeZoom}
+        {showModeControl && (
+          <PreviewModeControl
+            value={mode}
+            finalDisabled={!workingFile}
+            reviewPending={preparationPending}
+            onChange={changeMode}
           />
-          <div className="docx-preview-status" role="status" aria-label="Preview status" aria-live="polite">
-            {status}
-          </div>
+        )}
+        <div className="docx-preview-controls">
+          {showZoomControls && (
+            <ZoomControls
+              zoom={zoom}
+              fit={zoomState.choice === null}
+              minimum={zoomState.minimum}
+              maximum={zoomState.maximum}
+              onChange={changeZoom}
+            />
+          )}
         </div>
       </div>
+      <span className="docx-preview-announcement" role="status" aria-label="Preview update" aria-live="polite">
+        {previewUpdate}
+      </span>
       {preparationError && (
         <div className="docx-preview-alert" role="alert">
           <span>{preparationError}</span>
@@ -747,7 +759,7 @@ export function DocumentPreview({
           Couldn't preview this document. {renderError.message}
         </div>
       )}
-      <div className={`docx-preview-layout${mode === "review" ? " docx-preview-layout--review" : ""}`}>
+      <div className={`docx-preview-layout${mode === "review" && showReviewPanel ? " docx-preview-layout--review" : ""}`}>
         <main
           ref={viewportRef}
           className="docx-preview-viewport preview-viewport"
@@ -785,7 +797,7 @@ export function DocumentPreview({
             <div className="docx-preview-loading">Preparing preview…</div>
           )}
         </main>
-        {mode === "review" && (
+        {mode === "review" && showReviewPanel && (
           <ReviewPanel
             items={items}
             entities={entities}

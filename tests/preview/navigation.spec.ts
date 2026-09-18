@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
+import { waitForCommittedMode } from "./helpers";
 
 test("renders default cards inside viewer-owned navigation wrappers", async ({ page }) => {
   await page.goto("/?fixture=consulting-docx");
   await page.getByRole("button", { name: "Review" }).click();
-  await expect(page.locator(".docx-preview-status")).toContainText("Review view", { timeout: 30_000 });
+  await waitForCommittedMode(page, "review");
 
   const card = page.locator('[data-review-item-id="comment-services"]');
   await expect(card).toBeVisible({ timeout: 30_000 });
@@ -16,7 +17,7 @@ test("renders default cards inside viewer-owned navigation wrappers", async ({ p
 test("card activation scrolls the document viewport to its anchor", async ({ page }) => {
   await page.goto("/?fixture=consulting-docx");
   await page.getByRole("button", { name: "Review" }).click();
-  await expect(page.locator(".docx-preview-status")).toContainText("Review view", { timeout: 30_000 });
+  await waitForCommittedMode(page, "review");
   const card = page.locator('[data-review-item-id="redline-fees"]');
   await expect(card).toBeVisible({ timeout: 30_000 });
   const viewport = page.locator(".docx-preview-viewport");
@@ -30,7 +31,7 @@ test("card activation scrolls the document viewport to its anchor", async ({ pag
 test("document activation selects and reveals the matching card", async ({ page }) => {
   await page.goto("/?fixture=consulting-docx");
   await page.getByRole("button", { name: "Review" }).click();
-  await expect(page.locator(".docx-preview-status")).toContainText("Review view", { timeout: 30_000 });
+  await waitForCommittedMode(page, "review");
   const card = page.locator('[data-review-item-id="redline-fees"]');
   const target = page
     .locator('.docx-preview [data-docx-entity-id="redline-fees"]')
@@ -44,7 +45,7 @@ test("document activation selects and reveals the matching card", async ({ page 
 test("custom cards keep selection and expose consumer actions", async ({ page }) => {
   await page.goto("/?fixture=consulting-docx&cards=custom");
   await page.getByRole("button", { name: "Review" }).click();
-  await expect(page.locator(".docx-preview-status")).toContainText("Review view", { timeout: 30_000 });
+  await waitForCommittedMode(page, "review");
 
   const card = page.locator('[data-review-item-id="redline-consultant"]');
   await expect(card).toBeVisible({ timeout: 30_000 });
@@ -63,9 +64,7 @@ for (const key of ["Enter", "Space"] as const) {
   }) => {
     await page.goto("/?fixture=consulting-docx&cards=custom");
     await page.getByRole("button", { name: "Review" }).click();
-    await expect(page.locator(".docx-preview-status")).toContainText("Review view", {
-      timeout: 30_000,
-    });
+    await waitForCommittedMode(page, "review");
 
     const card = page.locator('[data-review-item-id="redline-consultant"]');
     const action = card.getByRole("button", { name: "Record consumer action" });

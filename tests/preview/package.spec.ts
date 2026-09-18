@@ -18,7 +18,7 @@ test("keeps zoom controls within the supported range", async ({ page }) => {
 
   await zoom.fill("5");
   await zoom.press("Enter");
-  await expect(zoom).toHaveValue("25");
+  await expect(zoom).toHaveValue("20");
 
   await zoom.fill("350");
   await zoom.press("Enter");

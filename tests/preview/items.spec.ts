@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { waitForCommittedMode } from "./helpers";
 
 test("Final projects every supplied resolvable redline and hides comments", async ({ page }) => {
   await page.goto("/?fixture=consulting-docx");
@@ -6,7 +7,7 @@ test("Final projects every supplied resolvable redline and hides comments", asyn
   const originalDigest = await page.getByTestId("source-digest").textContent();
   await page.getByRole("button", { name: "Final" }).click();
 
-  await expect(page.locator(".docx-preview-status")).toContainText("Final view", { timeout: 30_000 });
+  await waitForCommittedMode(page, "final");
   await expect(page.getByLabel("Review comments and redlines")).toHaveCount(0);
   await expect(page.getByTestId("supplied-redline-count")).toHaveText("2");
   const finalProjection = await page.locator(".docx-preview").evaluate((host) => {
@@ -25,7 +26,7 @@ test("Final projects every supplied resolvable redline and hides comments", asyn
   expect(finalProjection.decorations).toBe(0);
 
   await page.getByRole("button", { name: "Original" }).click();
-  await expect(page.locator(".docx-preview-status")).toContainText("Original view", { timeout: 30_000 });
+  await waitForCommittedMode(page, "original");
   expect(await page.getByTestId("source-digest").textContent()).toBe(originalDigest);
   expect(
     await page
@@ -37,7 +38,7 @@ test("Final projects every supplied resolvable redline and hides comments", asyn
 test("diagnostics stay visible instead of silently dropping invalid items", async ({ page }) => {
   await page.goto("/?fixture=consulting-docx");
   await page.getByRole("button", { name: "Review" }).click();
-  await expect(page.locator(".docx-preview-status")).toContainText("Review view", { timeout: 30_000 });
+  await waitForCommittedMode(page, "review");
 
   const invalid = page.locator('[data-review-item-id="invalid-anchor"]');
   await expect(invalid).toBeVisible({ timeout: 30_000 });
@@ -47,7 +48,7 @@ test("diagnostics stay visible instead of silently dropping invalid items", asyn
 test("item updates retain selection and item removal clears it", async ({ page }) => {
   await page.goto("/?fixture=consulting-docx");
   await page.getByRole("button", { name: "Review" }).click();
-  await expect(page.locator(".docx-preview-status")).toContainText("Review view", { timeout: 30_000 });
+  await waitForCommittedMode(page, "review");
   const selected = page.locator('[data-review-item-id="redline-consultant"]');
   await expect(selected).toBeVisible({ timeout: 30_000 });
   await selected.click();

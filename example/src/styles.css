@@ -28,25 +28,6 @@ button, input, select { font: inherit; }
 .example-eyebrow { color: #7d8273; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
 .example-actions { display: flex; align-items: end; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
 .example-actions label { display: grid; gap: 4px; color: #676b61; font-size: 11px; }
-.example-zoom-config {
-  display: flex;
-  align-items: end;
-  gap: 5px;
-  padding: 4px 6px;
-  border: 1px solid #d9dad6;
-  border-radius: 6px;
-  background: #f4f5f1;
-}
-.example-zoom-config label { gap: 2px; }
-.example-zoom-config input {
-  width: 54px;
-  min-height: 26px;
-  padding: 3px 5px;
-  border: 1px solid #cdd1c6;
-  border-radius: 4px;
-  color: #3f4538;
-  background: #fff;
-}
 .example-actions select,
 .example-actions button,
 .example-test-controls button,
@@ -60,6 +41,89 @@ button, input, select { font: inherit; }
 }
 
 .example-actions button { color: #fff; border-color: #292c24; background: #292c24; }
+.example-settings { position: relative; align-self: flex-end; }
+.example-actions .example-settings-button {
+  display: grid;
+  width: 34px;
+  padding: 7px;
+  place-items: center;
+  color: #4c5347;
+  border-color: #cdd1c6;
+  background: #fff;
+}
+.example-settings-button:hover,
+.example-settings-button[aria-expanded="true"] { background: #eef0eb; }
+.example-settings-button:focus-visible,
+.example-settings-popover input:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+.example-settings-button svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.35;
+}
+.example-settings-popover {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(328px, calc(100vw - 24px));
+  max-height: calc(100vh - 76px);
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid #cdd1c6;
+  border-radius: 8px;
+  color: #343a31;
+  background: #fff;
+  box-shadow: 0 12px 32px rgb(35 40 31 / 18%);
+}
+.example-settings-popover h2 {
+  margin: 0 0 14px;
+  font-size: 14px;
+  font-weight: 650;
+}
+.example-settings-zoom {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e1e3dd;
+}
+.example-settings-zoom label {
+  display: grid;
+  gap: 5px;
+  color: #656b60;
+  font-size: 10px;
+}
+.example-settings-zoom input {
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  padding: 5px 7px;
+  border: 1px solid #cdd1c6;
+  border-radius: 5px;
+  color: #343a31;
+  background: #fff;
+}
+.example-settings-toggles {
+  display: grid;
+  gap: 11px;
+  padding-top: 14px;
+}
+.example-settings-toggles label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: #4f554b;
+  font-size: 12px;
+}
+.example-settings-toggles input { accent-color: #2563eb; }
 .example-file-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 
 .example-test-controls {
@@ -88,7 +152,7 @@ button, input, select { font: inherit; }
   .example-toolbar { align-items: flex-start; padding: 10px 12px; }
   .example-toolbar h1 { font-size: 15px; }
   .example-actions { max-width: calc(100% - 170px); }
-  .example-zoom-config { order: 1; }
+  .example-settings { order: 1; }
   .example-actions > label { order: 2; }
   .example-actions > button { order: 3; }
   .example-test-controls { padding-inline: 12px; }
@@ -97,4 +161,5 @@ button, input, select { font: inherit; }
 @media (max-width: 520px) {
   .example-toolbar { flex-wrap: wrap; }
   .example-actions { width: 100%; max-width: none; justify-content: flex-start; }
+  .example-settings-popover { right: auto; left: 0; }
 }
