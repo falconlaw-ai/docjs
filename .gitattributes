@@ -1,0 +1,2 @@
+# Preserve intentional Markdown hard breaks in byte-identical browser fixtures.
+tests/preview/fixtures/*.md whitespace=-blank-at-eol

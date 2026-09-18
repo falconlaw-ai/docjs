@@ -5,4 +5,13 @@ obj
 docx.js.map
 /*.json
 /*.config
+!tsconfig.react.json
+!playwright.config.ts
+!pnpm-workspace.yaml
+/dist/
+/example/dist/
+/example/public/fixtures/
+/example/public/pdfjs/
+/playwright-report/
+/test-results/
 *.log

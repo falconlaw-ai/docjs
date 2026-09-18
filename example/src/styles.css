@@ -1,0 +1,73 @@
+:root {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #252622;
+  background: #e8e9e6;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+button, select { font: inherit; }
+
+.example-app {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.example-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 12px 24px;
+  border-bottom: 1px solid #d9dad6;
+  background: #fafbf9;
+}
+
+.example-toolbar h1 { margin: 2px 0 0; font-size: 18px; font-weight: 600; }
+.example-eyebrow { color: #7d8273; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+.example-actions { display: flex; align-items: end; gap: 10px; }
+.example-actions label { display: grid; gap: 4px; color: #676b61; font-size: 11px; }
+.example-actions select,
+.example-actions button,
+.example-test-controls button,
+.example-custom-card button {
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid #cdd1c6;
+  border-radius: 5px;
+  color: #3f4538;
+  background: #fff;
+}
+
+.example-actions button { color: #fff; border-color: #292c24; background: #292c24; }
+.example-file-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+.example-test-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 24px;
+  border-bottom: 1px solid #d9dad6;
+  color: #676b61;
+  background: #f4f5f1;
+  font-size: 10px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.example-test-controls button { min-height: 28px; padding: 4px 8px; }
+.example-test-controls output { color: #30342c; font-weight: 600; }
+.example-digest { max-width: 190px; overflow: hidden; text-overflow: ellipsis; }
+.example-preview { flex: 1; min-height: 0; }
+.example-error, .example-loading { margin: 40px; padding: 24px; background: #fff; }
+.example-error { color: #843c2b; }
+.example-custom-card > strong { display: block; margin-top: 12px; }
+.example-custom-card button { min-height: 30px; font-size: 11px; }
+
+@media (max-width: 760px) {
+  .example-toolbar { align-items: flex-start; padding: 10px 12px; }
+  .example-toolbar h1 { font-size: 15px; }
+  .example-actions { flex-wrap: wrap; justify-content: flex-end; }
+  .example-test-controls { padding-inline: 12px; }
+}

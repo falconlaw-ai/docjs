@@ -1,0 +1,393 @@
+.docx-preview-shell {
+  --docx-preview-background: #e8e9e6;
+  --docx-preview-bar-background: #fafbf9;
+  --docx-preview-panel-background: #f9faf6;
+  --docx-preview-border: #d7d9d3;
+  --docx-preview-text: #252622;
+  --docx-preview-accent: #2563eb;
+  min-height: 520px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--docx-preview-text);
+  background: var(--docx-preview-background);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+.docx-preview-shell,
+.docx-preview-shell * {
+  box-sizing: border-box;
+}
+
+.docx-preview-shell button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.docx-preview-shell button:focus-visible,
+.docx-preview-mode-option:focus-visible {
+  outline: 3px solid #918325;
+  outline-offset: 4px;
+}
+
+.docx-preview-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 58px;
+  padding: 8px 24px;
+  border-bottom: 1px solid var(--docx-preview-border);
+  color: #73766b;
+  background: var(--docx-preview-bar-background);
+  font-size: 12px;
+}
+
+.docx-preview-document-info,
+.docx-preview-controls,
+.docx-preview-zoom-controls,
+.docx-preview-zoom-value {
+  display: flex;
+  align-items: center;
+}
+
+.docx-preview-document-info {
+  flex: 1 1 0;
+  min-width: 0;
+  gap: 10px;
+}
+
+.docx-preview-document-info > svg {
+  flex-shrink: 0;
+  width: 16px;
+}
+
+.docx-preview-filename {
+  overflow: hidden;
+  color: #505349;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.docx-preview-format-badge {
+  flex-shrink: 0;
+  padding: 3px 5px;
+  border-radius: 3px;
+  color: #676a5d;
+  background: #daddd5;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+.docx-preview-controls {
+  flex: 1 1 0;
+  justify-content: flex-end;
+  gap: 20px;
+}
+
+.docx-preview-status {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.docx-preview-mode-control {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(82px, 1fr));
+  gap: 3px;
+  flex: 0 0 auto;
+  padding: 3px;
+  border: 1px solid #1f211d;
+  border-radius: 10px;
+  background: #292c27;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 8%), 0 1px 2px rgb(24 28 20 / 14%);
+}
+
+.docx-preview-mode-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 7px;
+  color: #c8cbc3;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 550;
+  white-space: nowrap;
+}
+
+.docx-preview-mode-option:hover:not(:disabled):not([aria-pressed="true"]) {
+  color: #fff;
+  background: rgb(255 255 255 / 7%);
+}
+
+.docx-preview-mode-option[aria-pressed="true"] {
+  color: #2c3029;
+  background: #f7f8f4;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 24%);
+}
+
+.docx-preview-mode-option:disabled {
+  color: #73776e;
+  cursor: not-allowed;
+}
+
+.docx-preview-mode-option[aria-busy="true"]::after {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+  animation: docx-preview-mode-pulse 1.1s ease-in-out infinite;
+}
+
+.docx-preview-mode-option svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.35;
+}
+
+@keyframes docx-preview-mode-pulse {
+  50% { opacity: 0.25; }
+}
+
+.docx-preview-zoom-controls { gap: 3px; }
+
+.docx-preview-zoom-controls button {
+  min-width: 26px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: #505349;
+  background: transparent;
+}
+
+.docx-preview-zoom-controls button:hover { background: #daddd5; }
+.docx-preview-zoom-controls button:disabled { opacity: 0.4; cursor: default; }
+
+.docx-preview-zoom-controls .docx-preview-zoom-fit {
+  margin-left: 5px;
+  padding: 0 8px;
+}
+
+.docx-preview-zoom-fit[aria-pressed="true"] { background: #daddd5; }
+.docx-preview-zoom-value { gap: 2px; font-variant-numeric: tabular-nums; }
+
+.docx-preview-zoom-value input {
+  width: 38px;
+  padding: 4px 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-align: right;
+  appearance: textfield;
+}
+
+.docx-preview-zoom-value input::-webkit-inner-spin-button,
+.docx-preview-zoom-value input::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.docx-preview-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 24px;
+  color: #843c2b;
+  background: #fff3e8;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.docx-preview-alert button {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border: 1px solid #d7b8a8;
+  border-radius: 4px;
+  color: #713421;
+  background: #fff;
+}
+
+.docx-preview-layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.docx-preview-viewport {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 32px max(20px, calc((100% - 1100px) / 5)) 60px;
+  scrollbar-gutter: stable;
+}
+
+.docx-preview-layout--review .docx-preview-viewport { padding-inline: 24px; }
+.docx-preview-render-slot { min-width: max-content; }
+
+.docx-preview-render-slot.is-staged {
+  position: fixed;
+  z-index: -1;
+  top: 0;
+  left: -100000px;
+  width: 1000px;
+  height: 1000px;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.docx-preview-loading {
+  padding: 48px;
+  color: #797e70;
+  font-size: 14px;
+  text-align: center;
+}
+
+.docx-preview-review-panel {
+  width: 320px;
+  flex: 0 0 320px;
+  overflow: auto;
+  padding: 24px 20px;
+  border-left: 1px solid #d4d7cd;
+  background: var(--docx-preview-panel-background);
+}
+
+.docx-preview-review-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.docx-preview-review-heading h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.docx-preview-review-heading > span,
+.docx-preview-review-description {
+  color: #747c68;
+  font-size: 12px;
+}
+
+.docx-preview-review-description {
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+
+.docx-preview-review-empty {
+  padding: 24px 0;
+  color: #8b907e;
+  font-size: 13px;
+}
+
+.docx-preview-review-item {
+  margin: 12px 0;
+  padding: 15px;
+  border: 1px solid #dfe1d7;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.docx-preview-review-item[role="button"] { cursor: pointer; }
+
+.docx-preview-review-item[role="button"]:hover {
+  border-color: #aebbd3;
+  background: #f7f9fd;
+}
+
+.docx-preview-review-item[role="button"]:focus-visible {
+  outline: 3px solid var(--docx-preview-accent);
+  outline-offset: 2px;
+}
+
+.docx-preview-review-item.is-selected,
+.docx-preview-review-item.is-selected:hover {
+  border-color: var(--docx-preview-accent);
+  background: #fff;
+  box-shadow: none;
+}
+
+.docx-preview-review-item-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #6a7950;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.docx-preview-review-item--redline .docx-preview-review-item-heading { color: #9b5c36; }
+
+.docx-preview-review-item blockquote {
+  margin: 14px 0;
+  padding-left: 10px;
+  border-left: 2px solid #dbdccc;
+  color: #6d705e;
+  line-height: 1.5;
+}
+
+.docx-preview-review-item p { line-height: 1.6; }
+.docx-preview-replacement-text { color: #25754c; }
+
+.docx-preview-review-warning {
+  padding: 8px;
+  border-radius: 4px;
+  color: #a35e24;
+  background: #fff5df;
+}
+
+.docx-preview-item-count {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 900px) {
+  .docx-preview-bar { flex-wrap: wrap; }
+  .docx-preview-review-panel { width: 260px; flex-basis: 260px; padding: 18px 12px; }
+}
+
+@media (max-width: 650px) {
+  .docx-preview-bar { gap: 8px; padding: 9px 16px; }
+  .docx-preview-document-info,
+  .docx-preview-controls { flex-basis: calc(50% - 4px); }
+  .docx-preview-mode-control { order: 3; width: 100%; grid-template-columns: repeat(3, 1fr); }
+  .docx-preview-controls { gap: 8px; }
+  .docx-preview-zoom-fit,
+  .docx-preview-format-badge { display: none; }
+  .docx-preview-status { font-size: 10px; }
+  .docx-preview-layout--review { flex-direction: column; }
+  .docx-preview-layout--review .docx-preview-review-panel {
+    width: 100%;
+    flex: 0 0 200px;
+    border-top: 1px solid #d4d7cd;
+    border-left: 0;
+  }
+  .docx-preview-layout--review .docx-preview-viewport { padding: 16px 12px 32px; }
+}
