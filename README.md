@@ -107,6 +107,16 @@ and preserves text continuity when switching between fit-width and manual zoom.
 A failed update preserves the last committed rendering and reports a refresh
 error through `onRefreshError`.
 
+Set `minZoom` and `maxZoom` as percentages to narrow the viewer's absolute
+25% to 200% range. They default to 25 and 200. Nonfinite values use those defaults;
+if the effective maximum is below the effective minimum, the range collapses to
+the minimum. `defaultZoom` accepts a percentage or `null`. A finite value is
+clamped to the effective range, while `undefined`, `null`, and nonfinite values
+select fit width. The viewer applies the default on mount, when the document ID
+or revision changes, and when `defaultZoom` itself changes. Other rerenders keep
+the user's current zoom. Changing only the bounds clamps a manual zoom or
+recalculates fit width without reloading the document.
+
 ## Custom cards and appearance
 
 `renderReviewItem` receives `{ item, entity, selected, diagnostic }`. Return the

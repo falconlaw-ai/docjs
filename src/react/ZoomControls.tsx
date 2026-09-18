@@ -3,10 +3,14 @@ import { useEffect, useState } from "react";
 export function ZoomControls({
   zoom,
   fit,
+  minimum,
+  maximum,
   onChange,
 }: {
   zoom: number;
   fit: boolean;
+  minimum: number;
+  maximum: number;
   onChange: (zoom: number | null) => void;
 }) {
   const [draft, setDraft] = useState(String(zoom));
@@ -15,7 +19,7 @@ export function ZoomControls({
   function draftZoom() {
     const value = Number(draft);
     return draft.trim() && Number.isFinite(value)
-      ? Math.max(25, Math.min(300, Math.round(value)))
+      ? Math.max(minimum, Math.min(maximum, Math.round(value)))
       : zoom;
   }
 
@@ -26,7 +30,7 @@ export function ZoomControls({
   }
 
   function step(delta: number) {
-    const next = Math.max(25, Math.min(300, draftZoom() + delta));
+    const next = Math.max(minimum, Math.min(maximum, draftZoom() + delta));
     setDraft(String(next));
     onChange(next);
   }
@@ -36,7 +40,7 @@ export function ZoomControls({
       <button
         type="button"
         aria-label="Zoom out"
-        disabled={draftZoom() <= 25}
+        disabled={draftZoom() <= minimum}
         onClick={() => step(-10)}
       >
         −
@@ -45,8 +49,8 @@ export function ZoomControls({
         <input
           aria-label="Zoom percentage"
           type="number"
-          min={25}
-          max={300}
+          min={minimum}
+          max={maximum}
           step={1}
           value={draft}
           onChange={(event) => setDraft(event.currentTarget.value)}
@@ -60,7 +64,7 @@ export function ZoomControls({
       <button
         type="button"
         aria-label="Zoom in"
-        disabled={draftZoom() >= 300}
+        disabled={draftZoom() >= maximum}
         onClick={() => step(10)}
       >
         +

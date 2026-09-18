@@ -51,6 +51,9 @@ export type DocumentPreviewProps = {
   items?: readonly ReviewItem[];
   renderReviewItem?: (context: ReviewItemRenderContext) => ReactNode;
   pdfAssets?: PdfPreviewAssets;
+  minZoom?: number;
+  maxZoom?: number;
+  defaultZoom?: number | null;
   className?: string;
   style?: CSSProperties;
   onLoad?: (result: { mode: PreviewMode; pages: number }) => void;

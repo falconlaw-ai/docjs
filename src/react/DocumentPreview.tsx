@@ -54,6 +54,42 @@ type PendingReadingPosition = {
   position: ReadingPosition;
 };
 
+type ZoomState = {
+  minimum: number;
+  maximum: number;
+  choice: number | null;
+};
+
+const ABSOLUTE_MINIMUM_ZOOM = 25;
+const ABSOLUTE_MAXIMUM_ZOOM = 200;
+
+function clampZoom(zoom: number, minimum: number, maximum: number) {
+  return Math.max(minimum, Math.min(maximum, zoom));
+}
+
+function normalizeZoomRange(minimum: number | undefined, maximum: number | undefined) {
+  const effectiveMinimum = typeof minimum === "number" && Number.isFinite(minimum)
+    ? clampZoom(minimum, ABSOLUTE_MINIMUM_ZOOM, ABSOLUTE_MAXIMUM_ZOOM)
+    : ABSOLUTE_MINIMUM_ZOOM;
+  const requestedMaximum = typeof maximum === "number" && Number.isFinite(maximum)
+    ? clampZoom(maximum, ABSOLUTE_MINIMUM_ZOOM, ABSOLUTE_MAXIMUM_ZOOM)
+    : ABSOLUTE_MAXIMUM_ZOOM;
+  return {
+    minimum: effectiveMinimum,
+    maximum: Math.max(effectiveMinimum, requestedMaximum),
+  };
+}
+
+function normalizeDefaultZoom(
+  zoom: number | null | undefined,
+  minimum: number,
+  maximum: number,
+) {
+  return typeof zoom === "number" && Number.isFinite(zoom)
+    ? clampZoom(zoom, minimum, maximum)
+    : null;
+}
+
 const READING_NAVIGATION_KEYS = new Set([
   " ",
   "ArrowDown",
@@ -221,6 +257,9 @@ export function DocumentPreview({
   items = [],
   renderReviewItem,
   pdfAssets,
+  minZoom,
+  maxZoom,
+  defaultZoom,
   className,
   style,
   onLoad,
@@ -238,7 +277,15 @@ export function DocumentPreview({
   const previewReady = useRef(false);
   const committedViewRef = useRef<PreviewView | null>(null);
   const previousDesiredKey = useRef<string | null>(null);
-  const [zoomChoice, setZoomChoice] = useState<number | null>(null);
+  const requestedZoomRange = normalizeZoomRange(minZoom, maxZoom);
+  const [zoomState, setZoomState] = useState<ZoomState>(() => ({
+    ...requestedZoomRange,
+    choice: normalizeDefaultZoom(
+      defaultZoom,
+      requestedZoomRange.minimum,
+      requestedZoomRange.maximum,
+    ),
+  }));
   const [pageWidth, setPageWidth] = useState(794);
   const [viewportWidth, setViewportWidth] = useState(794);
   const [committed, setCommitted] = useState<PreviewView | null>(null);
@@ -261,8 +308,12 @@ export function DocumentPreview({
         ? original.file
         : null;
   const zoom =
-    zoomChoice ??
-    Math.max(25, Math.min(300, Math.floor((viewportWidth / pageWidth) * 100)));
+    zoomState.choice ??
+    clampZoom(
+      Math.floor((viewportWidth / pageWidth) * 100),
+      zoomState.minimum,
+      zoomState.maximum,
+    );
 
   const desired = useMemo<PreviewView | null>(() => {
     if (mode === "original" || !workingFile) {
@@ -460,7 +511,6 @@ export function DocumentPreview({
   }, [matchingPreparation, mode, onRequestPreparation, original, originalIdentityKey, workingFile]);
 
   useEffect(() => {
-    setZoomChoice(null);
     setPageWidth(794);
     setPages(null);
     setRenderError(null);
@@ -527,7 +577,7 @@ export function DocumentPreview({
     [cancelPendingRestore],
   );
 
-  function changeZoom(next: number | null) {
+  const applyZoomState = useCallback((next: ZoomState) => {
     const current = committedViewRef.current;
     if (
       current &&
@@ -544,11 +594,73 @@ export function DocumentPreview({
         };
       }
     }
-    setZoomChoice(next);
+    setZoomState(next);
     if (current && previewReady.current && desiredKeyRef.current === current.key) {
       restorePendingPosition(current);
     }
+  }, [captureForView, restorePendingPosition]);
+
+  function changeZoom(next: number | null) {
+    const choice =
+      next === null
+        ? null
+        : clampZoom(next, zoomState.minimum, zoomState.maximum);
+    applyZoomState({ ...zoomState, choice });
   }
+
+  const previousZoomProps = useRef({
+    identityKey: originalIdentityKey,
+    defaultZoom,
+    minimum: requestedZoomRange.minimum,
+    maximum: requestedZoomRange.maximum,
+  });
+
+  useLayoutEffect(() => {
+    const previous = previousZoomProps.current;
+    const defaultChanged =
+      previous.identityKey !== originalIdentityKey ||
+      !Object.is(previous.defaultZoom, defaultZoom);
+    const boundsChanged =
+      previous.minimum !== requestedZoomRange.minimum ||
+      previous.maximum !== requestedZoomRange.maximum;
+    previousZoomProps.current = {
+      identityKey: originalIdentityKey,
+      defaultZoom,
+      minimum: requestedZoomRange.minimum,
+      maximum: requestedZoomRange.maximum,
+    };
+    if (!defaultChanged && !boundsChanged) return;
+
+    const choice = defaultChanged
+      ? normalizeDefaultZoom(
+          defaultZoom,
+          requestedZoomRange.minimum,
+          requestedZoomRange.maximum,
+        )
+      : zoomState.choice === null
+        ? null
+        : clampZoom(
+            zoomState.choice,
+            requestedZoomRange.minimum,
+            requestedZoomRange.maximum,
+          );
+    if (
+      zoomState.minimum === requestedZoomRange.minimum &&
+      zoomState.maximum === requestedZoomRange.maximum &&
+      Object.is(zoomState.choice, choice)
+    ) {
+      return;
+    }
+
+    applyZoomState({ ...requestedZoomRange, choice });
+  }, [
+    applyZoomState,
+    defaultZoom,
+    originalIdentityKey,
+    requestedZoomRange.maximum,
+    requestedZoomRange.minimum,
+    zoomState,
+  ]);
 
   function changeMode(next: PreviewMode) {
     if (next === "final" && !workingFile) return;
@@ -605,7 +717,9 @@ export function DocumentPreview({
         <div className="docx-preview-controls">
           <ZoomControls
             zoom={zoom}
-            fit={zoomChoice === null}
+            fit={zoomState.choice === null}
+            minimum={zoomState.minimum}
+            maximum={zoomState.maximum}
             onChange={changeZoom}
           />
           <div className="docx-preview-status" role="status" aria-label="Preview status" aria-live="polite">

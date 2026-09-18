@@ -67,6 +67,26 @@ function modeFromUrl(): PreviewMode {
     : "original";
 }
 
+function zoomInputFromUrl(name: string) {
+  return new URL(window.location.href).searchParams.get(name) ?? "";
+}
+
+function defaultZoomInputFromUrl() {
+  const value = new URL(window.location.href).searchParams.get("defaultZoom");
+  return {
+    value: value === "null" || value === null ? "" : value,
+    emptyValue: value === "null" ? null : undefined,
+  };
+}
+
+function zoomValue(value: string) {
+  return value.trim() ? Number(value) : undefined;
+}
+
+function visibleNumberInput(value: string) {
+  return value.trim() && !Number.isFinite(Number(value)) ? "" : value;
+}
+
 function formatForUpload(file: File): PreviewDocument["format"] | null {
   const extension = file.name.split(".").pop()?.toLowerCase();
   if (extension === "docx" || extension === "pdf") return extension;
@@ -99,6 +119,19 @@ export function App() {
   const [consumerAction, setConsumerAction] = useState("none");
   const [sourceDigest, setSourceDigest] = useState("pending");
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [minimumZoomInput, setMinimumZoomInput] = useState(() =>
+    zoomInputFromUrl("minZoom"),
+  );
+  const [maximumZoomInput, setMaximumZoomInput] = useState(() =>
+    zoomInputFromUrl("maxZoom"),
+  );
+  const [defaultZoomInput, setDefaultZoomInput] = useState(defaultZoomInputFromUrl);
+
+  const minimumZoom = zoomValue(minimumZoomInput);
+  const maximumZoom = zoomValue(maximumZoomInput);
+  const defaultZoom = defaultZoomInput.value.trim()
+    ? Number(defaultZoomInput.value)
+    : defaultZoomInput.emptyValue;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -257,6 +290,43 @@ export function App() {
           <h1>Document preview example</h1>
         </div>
         <div className="example-actions">
+          <div className="example-zoom-config" role="group" aria-label="Zoom configuration">
+            <label>
+              <span>Min %</span>
+              <input
+                aria-label="Min %"
+                type="number"
+                value={visibleNumberInput(minimumZoomInput)}
+                placeholder="25"
+                onChange={(event) => setMinimumZoomInput(event.currentTarget.value)}
+              />
+            </label>
+            <label>
+              <span>Max %</span>
+              <input
+                aria-label="Max %"
+                type="number"
+                value={visibleNumberInput(maximumZoomInput)}
+                placeholder="200"
+                onChange={(event) => setMaximumZoomInput(event.currentTarget.value)}
+              />
+            </label>
+            <label>
+              <span>Default %</span>
+              <input
+                aria-label="Default %"
+                type="number"
+                value={visibleNumberInput(defaultZoomInput.value)}
+                placeholder="Fit"
+                onChange={(event) =>
+                  setDefaultZoomInput({
+                    value: event.currentTarget.value,
+                    emptyValue: null,
+                  })
+                }
+              />
+            </label>
+          </div>
           <label>
             <span>Example document</span>
             <select
@@ -309,6 +379,9 @@ export function App() {
             preparation={preparation}
             onRequestPreparation={requestPreparation}
             items={items}
+            minZoom={minimumZoom}
+            maxZoom={maximumZoom}
+            defaultZoom={defaultZoom}
             pdfAssets={{
               workerUrl: new URL("/pdfjs/pdf.worker.min.mjs", window.location.origin).href,
               resourceBaseUrl: new URL("/pdfjs/", window.location.origin).href,
