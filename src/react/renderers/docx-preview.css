@@ -1,0 +1,156 @@
+:host {
+  background: #e8e9e6;
+  color: #111827;
+  display: block;
+  min-width: 0;
+  width: 100%;
+}
+
+.docx-viewport,
+.docx-scale-sizer,
+.docx-scale-layer {
+  box-sizing: border-box;
+}
+
+.docx-style-container {
+  display: contents;
+}
+
+.docx-measurement-host {
+  left: -100000px;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  visibility: hidden;
+}
+
+.docx-incremental-stage {
+  left: -100000px;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  visibility: hidden;
+}
+
+.docx-viewport {
+  background: #e8e9e6;
+  min-height: 100%;
+  overflow: visible;
+  padding: 0;
+  width: 100%;
+}
+
+.docx-scale-sizer {
+  margin: 0 auto;
+  position: relative;
+}
+
+.docx-scale-layer {
+  display: inline-block;
+  left: 0;
+  position: absolute;
+  top: 0;
+  transform-origin: top left;
+  width: max-content;
+}
+
+.docx-render-target > .docx-wrapper {
+  background: transparent;
+  padding: 0;
+}
+
+.docx-render-target section.docx {
+  /* Generated DOCX files can omit page geometry. Inline OOXML dimensions and
+     margins from docx-preview override these defaults whenever supplied. */
+  box-sizing: border-box;
+  width: 210mm;
+  min-height: 297mm;
+  padding: 25.4mm;
+  font-family: Arial, sans-serif;
+  background: #fff;
+  border-radius: 3px;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 16%);
+  margin: 0 auto 16px;
+  overflow: hidden;
+}
+
+.docx-render-target section.docx:last-child {
+  margin-bottom: 0;
+}
+
+.docx-render-target section[data-docx-paginated] > * {
+  flex-shrink: 0;
+}
+
+.docx-render-target section[data-docx-paginated] > article {
+  margin-bottom: 0;
+  display: flow-root;
+}
+
+.docx-render-target section[data-docx-paginated] > footer {
+  margin-top: auto;
+}
+
+.docx-render-target p[data-docx-continuation] {
+  list-style-type: none;
+  counter-set: none;
+}
+
+.docx-render-target p[data-docx-continuation]::before {
+  content: none;
+  counter-increment: none;
+}
+
+.docx-render-target del {
+  color: #a32b2b;
+  background: #fcebea;
+}
+
+.docx-render-target ins {
+  color: #187044;
+  background: #e8f5ed;
+}
+
+::highlight(docx-comments) {
+  background: #fff0a6;
+}
+
+.docx-live-comment {
+  background: #fff0a6;
+  box-shadow: inset 0 -2px rgb(199 148 0 / 55%);
+}
+
+.docx-render-target .docx-comment-ref,
+.docx-render-target .docx-comment-popover {
+  display: none;
+}
+
+.docx-review-target {
+  border-radius: 2px;
+  cursor: pointer;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.docx-review-target:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.docx-review-selected {
+  background-image: linear-gradient(
+    rgb(37 99 235 / 12%),
+    rgb(37 99 235 / 12%)
+  );
+  box-shadow: inset 0 -2px #2563eb;
+}
+
+.docx-live-comment.docx-review-selected {
+  background-image: none;
+  box-shadow: inset 0 -2px rgb(199 148 0 / 82%);
+}
+
+.docx-render-target p[data-docx-list-marker]::before {
+  content: attr(data-docx-list-marker) "\a0";
+  font-family: Arial, sans-serif;
+}

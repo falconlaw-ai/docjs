@@ -1,50 +1,76 @@
 {
   "name": "docx-preview",
   "version": "0.4.0",
+  "private": true,
   "license": "Apache-2.0",
-  "keywords": [
-    "word",
-    "docx"
-  ],
-  "author": {
-    "name": "Volodymyr Baydalka"
-  },
+  "keywords": ["word", "docx"],
+  "author": { "name": "Volodymyr Baydalka" },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/VolodymyrBaydalka/docxjs.git"
   },
+  "packageManager": "pnpm@10.33.0",
+  "engines": { "node": ">=24" },
   "dependencies": {
-    "jszip": ">=3.0.0"
+    "jszip": ">=3.0.0",
+    "pdfjs-dist": "6.3.289",
+    "react-markdown": "10.1.0",
+    "rehype-external-links": "3.0.0",
+    "rehype-sanitize": "6.0.0",
+    "remark-gfm": "4.0.1"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "rollup": "^4.9.1",
+    "@playwright/test": "^1.55.0",
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^12.1.4",
+    "@types/node": "24.13.3",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "@xmldom/xmldom": "0.9.12",
     "diff": "^8.0.2",
     "jasmine-core": "^5.1.0",
     "karma": "^6.3.9",
     "karma-chrome-launcher": "^3.1.0",
     "karma-firefox-launcher": "^2.1.2",
     "karma-jasmine": "^5.0.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "rollup": "^4.9.1",
     "tslib": "^2.4.0",
-    "typescript": "^5.0.3"
+    "tsx": "4.23.11",
+    "typescript": "6.0.3"
   },
   "scripts": {
     "build": "rollup --config rollup.config.mjs",
     "build-prod": "rollup --config rollup.config.mjs --environment BUILD:production",
     "watch": "rollup --config rollup.config.mjs --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.react.json",
     "e2e": "karma start karma.conf.cjs --single-run",
-    "e2e-watch": "karma start karma.conf.cjs"
+    "e2e-watch": "karma start karma.conf.cjs",
+    "example:build": "pnpm --dir example build",
+    "example:dev": "pnpm --dir example dev",
+    "example:preview": "pnpm --dir example preview",
+    "test:package": "node --test tests/preview/package-smoke.cjs",
+    "test:review": "node --import tsx --test tests/review/*.test.ts",
+    "test:preview": "playwright test"
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
+  "sideEffects": ["**/*.css"],
   "exports": {
     ".": {
+      "types": "./dist/docx-preview.d.ts",
       "import": "./dist/docx-preview.mjs",
-      "require": "./dist/docx-preview.js",
-      "types": "./dist/docx-preview.d.ts"
-    }
+      "require": "./dist/docx-preview.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.mjs"
+    },
+    "./react/styles.css": "./dist/react/styles.css"
   },
   "types": "dist/docx-preview.d.ts"
 }

@@ -2,6 +2,11 @@ module.exports = (config) => {
   config.set({
     basePath: '',
     frameworks: ['jasmine'],
+    plugins: [
+      require('karma-jasmine'),
+      require('karma-chrome-launcher'),
+      require('karma-firefox-launcher')
+    ],
     files: [
       'node_modules/jszip/dist/jszip.js',
       'node_modules/diff/dist/diff.js',
