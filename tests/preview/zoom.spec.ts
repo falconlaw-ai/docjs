@@ -178,3 +178,138 @@ test("preserves reading position when live bounds clamp zoom", async ({ page }) 
   await page.waitForTimeout(350);
   expect(await visibleTextAtTop(page)).toBe(before);
 });
+
+test("fits only oversized zoom when entering Review", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/?fixture=consulting-docx&defaultZoom=150");
+  await waitForPreview(page);
+
+  const zoom = page.getByLabel("Zoom percentage");
+  await expect(zoom).toHaveValue("150");
+  await page.getByRole("button", { name: "Review", exact: true }).click();
+  await waitForCommittedMode(page, "review");
+  await expect(page.getByRole("button", { name: "Fit width" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+
+  await page.getByRole("button", { name: "Original", exact: true }).click();
+  await waitForCommittedMode(page, "original");
+  await zoom.fill("50");
+  await zoom.press("Enter");
+  await page.getByRole("button", { name: "Review", exact: true }).click();
+  await waitForCommittedMode(page, "review");
+  await expect(zoom).toHaveValue("50");
+  await expect(page.getByRole("button", { name: "Fit width" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+});
+
+test("selects fit for physical overflow even when the minimum limits it", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(
+    "/?fixture=consulting-docx&minZoom=150&defaultZoom=150",
+  );
+  await waitForPreview(page);
+
+  const zoom = page.getByLabel("Zoom percentage");
+  await page.getByRole("button", { name: "Review", exact: true }).click();
+  await waitForCommittedMode(page, "review");
+  await expect(page.getByRole("button", { name: "Fit width" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(zoom).toHaveValue("150");
+});
+
+test("keeps a manual Review zoom after the entry decision", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/?fixture=consulting-docx&defaultZoom=150");
+  await waitForPreview(page);
+  await page.getByRole("button", { name: "Review", exact: true }).click();
+  await waitForCommittedMode(page, "review");
+  await expect(page.getByRole("button", { name: "Fit width" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+
+  const zoom = page.getByLabel("Zoom percentage");
+  await zoom.fill("180");
+  await zoom.press("Enter");
+  await page.getByTestId("item-add").click();
+  await page.setViewportSize({ width: 1100, height: 800 });
+  await expect(zoom).toHaveValue("180");
+  await expect(page.getByRole("button", { name: "Fit width" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+});
+
+for (const destination of ["Original", "Final"] as const) {
+  test(`preserves Review's effective percentage when leaving fit width for ${destination}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/?fixture=consulting-docx&defaultZoom=150");
+    await waitForPreview(page);
+    await page.getByRole("button", { name: "Review", exact: true }).click();
+    await waitForCommittedMode(page, "review");
+
+    const zoom = page.getByLabel("Zoom percentage");
+    const reviewPercentage = await zoom.inputValue();
+    await expect(page.getByRole("button", { name: "Fit width" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await page.getByRole("button", { name: destination, exact: true }).click();
+    await waitForCommittedMode(page, destination.toLowerCase() as "original" | "final");
+    await expect(zoom).toHaveValue(reviewPercentage);
+    await expect(page.getByRole("button", { name: "Fit width" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+}
+
+test("waits for delayed Review preparation before applying its width", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(
+    "/?fixture=consulting-markdown&defaultZoom=150&delay=700",
+  );
+  await waitForPreview(page);
+
+  const zoom = page.getByLabel("Zoom percentage");
+  await page.getByRole("button", { name: "Review", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Review", exact: true })).toHaveAttribute(
+    "aria-busy",
+    "true",
+  );
+  await expect(zoom).toHaveValue("150");
+  await waitForCommittedMode(page, "review");
+  await expect(page.getByRole("button", { name: "Fit width" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+});
+
+test("lets an explicit default change replace a pending Review decision", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(
+    "/?fixture=consulting-markdown&defaultZoom=150&delay=1500",
+  );
+  await waitForPreview(page);
+  await page.getByRole("button", { name: "Review", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Review", exact: true })).toHaveAttribute(
+    "aria-busy",
+    "true",
+  );
+  await setZoomConfiguration(page, { default: "60" });
+
+  await waitForCommittedMode(page, "review");
+  await expect(page.getByLabel("Zoom percentage")).toHaveValue("60");
+  await expect(page.getByRole("button", { name: "Fit width" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+});

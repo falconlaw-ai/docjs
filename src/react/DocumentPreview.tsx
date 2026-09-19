@@ -60,11 +60,26 @@ type ZoomState = {
   choice: number | null;
 };
 
+type PendingReviewZoom = {
+  identityKey: string;
+  percentage: number;
+};
+
 const ABSOLUTE_MINIMUM_ZOOM = 20;
 const ABSOLUTE_MAXIMUM_ZOOM = 200;
 
 function clampZoom(zoom: number, minimum: number, maximum: number) {
   return Math.max(minimum, Math.min(maximum, zoom));
+}
+
+function viewportContentWidth(viewport: HTMLElement) {
+  const computed = getComputedStyle(viewport);
+  return Math.max(
+    1,
+    viewport.clientWidth -
+      parseFloat(computed.paddingLeft) -
+      parseFloat(computed.paddingRight),
+  );
 }
 
 function normalizeZoomRange(minimum: number | undefined, maximum: number | undefined) {
@@ -192,7 +207,7 @@ function ViewRenderer({
   onLoad: (view: PreviewView, pages: number) => void;
   onError: (view: PreviewView, message: string) => void;
   onRefreshError: (message: string) => void;
-  onPageWidth: (width: number) => void;
+  onPageWidth: (view: PreviewView, width: number) => void;
   onSelectEntity: (entityId: string) => void;
   onEntitiesChange: (view: PreviewView, entities: readonly ProjectedEntity[]) => void;
 }) {
@@ -202,6 +217,10 @@ function ViewRenderer({
     (entities: readonly ProjectedEntity[]) => onEntitiesChange(view, entities),
     [onEntitiesChange, view],
   );
+  const pageWidthChanged = useCallback(
+    (width: number) => onPageWidth(view, width),
+    [onPageWidth, view],
+  );
 
   if (view.format === "pdf") {
     return pdfAssets ? (
@@ -209,7 +228,7 @@ function ViewRenderer({
         file={view.file}
         zoom={zoom}
         assets={pdfAssets}
-        onPageWidth={onPageWidth}
+        onPageWidth={pageWidthChanged}
         onLoad={loaded}
         onError={failed}
       />
@@ -223,7 +242,7 @@ function ViewRenderer({
       <MarkdownPreview
         file={view.file}
         zoom={zoom}
-        onPageWidth={onPageWidth}
+        onPageWidth={pageWidthChanged}
         onLoad={loaded}
         onError={failed}
       />
@@ -237,7 +256,7 @@ function ViewRenderer({
       items={workingView ? items : undefined}
       revisionMode={view.mode === "final" ? "final" : "review"}
       zoom={zoom}
-      onPageWidth={onPageWidth}
+      onPageWidth={pageWidthChanged}
       onLoad={loaded}
       onError={failed}
       onRefreshError={onRefreshError}
@@ -305,6 +324,15 @@ export function DocumentPreview({
   zoomChoiceRef.current = zoomState.choice;
 
   const originalIdentityKey = identityKey(original);
+  const previousMode = useRef({ identityKey: originalIdentityKey, mode });
+  const pendingReviewZoom = useRef<PendingReviewZoom | null>(null);
+  const pageWidths = useRef(new Map<string, number>());
+  const previousZoomProps = useRef({
+    identityKey: originalIdentityKey,
+    defaultZoom,
+    minimum: requestedZoomRange.minimum,
+    maximum: requestedZoomRange.maximum,
+  });
   const matchingPreparation =
     preparation.status !== "unavailable" && matchesOriginal(preparation, original)
       ? preparation
@@ -531,15 +559,7 @@ export function DocumentPreview({
     const viewport = viewportRef.current;
     if (!viewport) return;
     const measure = () => {
-      const computed = getComputedStyle(viewport);
-      setViewportWidth(
-        Math.max(
-          1,
-          viewport.clientWidth -
-            parseFloat(computed.paddingLeft) -
-            parseFloat(computed.paddingRight),
-        ),
-      );
+      setViewportWidth(viewportContentWidth(viewport));
     };
     measure();
     const observer = new ResizeObserver(measure);
@@ -556,6 +576,8 @@ export function DocumentPreview({
   }, [matchingPreparation, mode, onRequestPreparation, original, originalIdentityKey, workingFile]);
 
   useEffect(() => {
+    pageWidths.current.clear();
+    pendingReviewZoom.current = null;
     setPageWidth(794);
     setPages(null);
     setRenderError(null);
@@ -614,6 +636,11 @@ export function DocumentPreview({
     [original],
   );
 
+  const pageWidthChanged = useCallback((view: PreviewView, width: number) => {
+    pageWidths.current.set(view.key, width);
+    if (desiredKeyRef.current === view.key) setPageWidth(width);
+  }, []);
+
   const selectEntity = useCallback(
     (entityId: string, origin: ReviewSelectionRequest["origin"]) => {
       cancelPendingRestore();
@@ -646,6 +673,7 @@ export function DocumentPreview({
   }, [captureForView, restorePendingPosition]);
 
   function changeZoom(next: number | null) {
+    pendingReviewZoom.current = null;
     const choice =
       next === null
         ? null
@@ -653,12 +681,86 @@ export function DocumentPreview({
     applyZoomState({ ...zoomState, choice });
   }
 
-  const previousZoomProps = useRef({
-    identityKey: originalIdentityKey,
+  useLayoutEffect(() => {
+    const previous = previousMode.current;
+    previousMode.current = { identityKey: originalIdentityKey, mode };
+    if (previous.identityKey !== originalIdentityKey) {
+      pendingReviewZoom.current = null;
+      return;
+    }
+    if (previous.mode === mode) return;
+
+    const previousProps = previousZoomProps.current;
+    const zoomPropsChanged =
+      !Object.is(previousProps.defaultZoom, defaultZoom) ||
+      previousProps.minimum !== requestedZoomRange.minimum ||
+      previousProps.maximum !== requestedZoomRange.maximum;
+    if (zoomPropsChanged) {
+      pendingReviewZoom.current = null;
+      return;
+    }
+
+    if (mode === "review") {
+      pendingReviewZoom.current = {
+        identityKey: originalIdentityKey,
+        percentage: zoom,
+      };
+      if (zoomState.choice === null) {
+        applyZoomState({ ...zoomState, choice: zoom });
+      }
+      return;
+    }
+
+    pendingReviewZoom.current = null;
+    if (previous.mode === "review" && !Object.is(zoomState.choice, zoom)) {
+      applyZoomState({ ...zoomState, choice: zoom });
+    }
+  }, [
+    applyZoomState,
     defaultZoom,
-    minimum: requestedZoomRange.minimum,
-    maximum: requestedZoomRange.maximum,
-  });
+    mode,
+    originalIdentityKey,
+    requestedZoomRange.maximum,
+    requestedZoomRange.minimum,
+    zoom,
+    zoomState,
+  ]);
+
+  useLayoutEffect(() => {
+    const pending = pendingReviewZoom.current;
+    if (
+      !pending ||
+      pending.identityKey !== originalIdentityKey ||
+      mode !== "review" ||
+      validCommitted?.mode !== "review" ||
+      validCommitted.key !== desired?.key ||
+      pages === null
+    ) {
+      return;
+    }
+    const workingPageWidth = pageWidths.current.get(validCommitted.key);
+    const viewport = viewportRef.current;
+    if (!workingPageWidth || !viewport) return;
+
+    const availableWidth = viewportContentWidth(viewport);
+    const availablePercentage = Math.floor((availableWidth / workingPageWidth) * 100);
+    const choice = pending.percentage > availablePercentage
+      ? null
+      : clampZoom(pending.percentage, zoomState.minimum, zoomState.maximum);
+    pendingReviewZoom.current = null;
+    if (!Object.is(zoomState.choice, choice)) {
+      applyZoomState({ ...zoomState, choice });
+    }
+  }, [
+    applyZoomState,
+    desired?.key,
+    mode,
+    originalIdentityKey,
+    pageWidth,
+    pages,
+    validCommitted,
+    zoomState,
+  ]);
 
   useLayoutEffect(() => {
     const previous = previousZoomProps.current;
@@ -675,6 +777,7 @@ export function DocumentPreview({
       maximum: requestedZoomRange.maximum,
     };
     if (!defaultChanged && !boundsChanged) return;
+    pendingReviewZoom.current = null;
 
     const choice = defaultChanged
       ? normalizeDefaultZoom(
@@ -826,7 +929,7 @@ export function DocumentPreview({
                       onLoad={commitView}
                       onError={failView}
                       onRefreshError={refreshFailed}
-                      onPageWidth={setPageWidth}
+                      onPageWidth={pageWidthChanged}
                       onSelectEntity={(entityId) => selectEntity(entityId, "document")}
                       onEntitiesChange={entitiesChanged}
                     />

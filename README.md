@@ -104,6 +104,10 @@ repaginate the affected section tail. They do not rebuild a DOCX ZIP. Switching
 modes may reparse and repaginate the prepared document; it does not reconvert it.
 A document keeps a separate reading position for Original, Review, and Final,
 and preserves text continuity when switching between fit-width and manual zoom.
+A Review transition keeps the current effective percentage when it fits the
+working document in Review's measured document area, and switches to fit width
+only when that percentage would be too large. Leaving Review keeps its effective
+percentage, including when Review was using fit width.
 A failed update preserves the last committed rendering and reports a refresh
 error through `onRefreshError`.
 
