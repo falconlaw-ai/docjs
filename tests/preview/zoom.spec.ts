@@ -36,6 +36,47 @@ async function visibleTextAtTop(page: Page) {
   });
 }
 
+async function reviewFitPercentage(page: Page, reservedScrollbarWidth: number) {
+  await page.goto("/?fixture=consulting-docx&defaultZoom=50");
+  if (reservedScrollbarWidth) {
+    await page.addStyleTag({
+      content: `.docx-preview-viewport { border-right: ${reservedScrollbarWidth}px solid transparent !important; }`,
+    });
+  }
+  await waitForPreview(page);
+  await page.getByRole("button", { name: "Review", exact: true }).click();
+  await waitForCommittedMode(page, "review");
+  return page.locator(".docx-preview-viewport").evaluate((viewport) => {
+    const computed = getComputedStyle(viewport);
+    const availableWidth =
+      viewport.clientWidth -
+      parseFloat(computed.paddingLeft) -
+      parseFloat(computed.paddingRight);
+    const pageWidth =
+      viewport
+        .querySelector<HTMLElement>(".docx-preview")
+        ?.shadowRoot?.querySelector<HTMLElement>(".docx-scale-layer")
+        ?.scrollWidth ?? 0;
+    return (availableWidth / pageWidth) * 100;
+  });
+}
+
+async function openReviewAtZoom(
+  page: Page,
+  percentage: number,
+  reservedScrollbarWidth: number,
+) {
+  await page.goto(`/?fixture=consulting-docx&defaultZoom=${percentage}`);
+  if (reservedScrollbarWidth) {
+    await page.addStyleTag({
+      content: `.docx-preview-viewport { border-right: ${reservedScrollbarWidth}px solid transparent !important; }`,
+    });
+  }
+  await waitForPreview(page);
+  await page.getByRole("button", { name: "Review", exact: true }).click();
+  await waitForCommittedMode(page, "review");
+}
+
 test("uses fit width for absent, null, and nonfinite defaults", async ({ page }) => {
   for (const query of ["", "&defaultZoom=null", "&defaultZoom=Infinity"]) {
     await page.goto(`/?fixture=consulting-markdown${query}`);
@@ -206,23 +247,33 @@ test("fits only oversized zoom when entering Review", async ({ page }) => {
   );
 });
 
-for (const { percentage, fits } of [
-  { percentage: 111.5, fits: true },
-  { percentage: 111.8, fits: false },
+for (const { position, fits } of [
+  { position: "below", fits: true },
+  { position: "above", fits: false },
 ] as const) {
-  test(`compares ${percentage}% with the exact Review fit threshold`, async ({ page }) => {
+  test(`compares a fractional zoom ${position} the exact Review fit threshold`, async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto(`/?fixture=consulting-docx&defaultZoom=${percentage}`);
-    await waitForPreview(page);
+    for (const reservedScrollbarWidth of [0, 15]) {
+      const exactFit = await reviewFitPercentage(page, reservedScrollbarWidth);
+      const floorFit = Math.floor(exactFit);
+      expect(exactFit).toBeGreaterThan(floorFit);
+      const percentage = fits
+        ? floorFit + (exactFit - floorFit) / 2
+        : exactFit + 0.1;
 
-    const zoom = page.getByLabel("Zoom percentage");
-    await page.getByRole("button", { name: "Review", exact: true }).click();
-    await waitForCommittedMode(page, "review");
-    await expect(page.getByRole("button", { name: "Fit width" })).toHaveAttribute(
-      "aria-pressed",
-      fits ? "false" : "true",
-    );
-    if (fits) await expect(zoom).toHaveValue(String(percentage));
+      await openReviewAtZoom(page, percentage, reservedScrollbarWidth);
+      await expect(page.getByRole("button", { name: "Fit width" })).toHaveAttribute(
+        "aria-pressed",
+        fits ? "false" : "true",
+      );
+      if (fits) {
+        await expect(page.getByLabel("Zoom percentage")).toHaveValue(
+          String(percentage),
+        );
+      }
+    }
   });
 }
 
