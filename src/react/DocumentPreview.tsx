@@ -743,8 +743,8 @@ export function DocumentPreview({
     if (!workingPageWidth || !viewport) return;
 
     const availableWidth = viewportContentWidth(viewport);
-    const availablePercentage = Math.floor((availableWidth / workingPageWidth) * 100);
-    const choice = pending.percentage > availablePercentage
+    const overflows = pending.percentage * workingPageWidth > availableWidth * 100;
+    const choice = overflows
       ? null
       : clampZoom(pending.percentage, zoomState.minimum, zoomState.maximum);
     pendingReviewZoom.current = null;

@@ -206,6 +206,26 @@ test("fits only oversized zoom when entering Review", async ({ page }) => {
   );
 });
 
+for (const { percentage, fits } of [
+  { percentage: 111.5, fits: true },
+  { percentage: 111.8, fits: false },
+] as const) {
+  test(`compares ${percentage}% with the exact Review fit threshold`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(`/?fixture=consulting-docx&defaultZoom=${percentage}`);
+    await waitForPreview(page);
+
+    const zoom = page.getByLabel("Zoom percentage");
+    await page.getByRole("button", { name: "Review", exact: true }).click();
+    await waitForCommittedMode(page, "review");
+    await expect(page.getByRole("button", { name: "Fit width" })).toHaveAttribute(
+      "aria-pressed",
+      fits ? "false" : "true",
+    );
+    if (fits) await expect(zoom).toHaveValue(String(percentage));
+  });
+}
+
 test("selects fit for physical overflow even when the minimum limits it", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto(
